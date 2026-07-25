@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>연세 어학당 · 한국어 배치고사 — UI 목업</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   디자인 토큰 (명세 §4 그대로 재현)
+   ========================================================= */
+:root{
+  --bg:#eef1f5; --surface:#ffffff; --ink:#1b2432; --muted:#697586;
+  --border:#dde3ea; --border-2:#eef1f5;
+  --student:#2f6fb0; --student-bg:#eaf2fb;
+  --instructor:#0e8f7e; --instructor-bg:#e6f6f2;
+  --admin:#6a4bd0; --admin-bg:#efeafc;
+  --system:#7a8699;
+  --primary:#243349; --danger:#c2483a; --ok:#0e8f7e; --warn:#c8862a;
+  --radius:14px;
+  --sidebar:#1f2a3d;
+  --shadow:0 1px 2px rgba(20,30,45,.05), 0 8px 24px rgba(20,30,45,.06);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Noto Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+  font-weight:400; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{margin:0; font-weight:700; text-wrap:balance}
+p{margin:0}
+a{color:inherit}
+button{font-family:inherit; cursor:pointer}
+.mono{font-variant-numeric:tabular-nums}
+
+/* =========================================================
+   상단 프로토타입 컨트롤 바 + 화면 인덱스 (§7)
+   ========================================================= */
+.protobar{
+  position:sticky; top:0; z-index:100; background:rgba(255,255,255,.92);
+  backdrop-filter:blur(8px); border-bottom:1px solid var(--border);
+}
+.protobar-inner{max-width:1280px; margin:0 auto; padding:12px 22px}
+.pb-top{display:flex; align-items:center; gap:16px; flex-wrap:wrap}
+.pb-brand{font-weight:900; font-size:16px; letter-spacing:-.2px; display:flex; align-items:center; gap:9px}
+.pb-brand .dot{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--student),var(--admin));display:inline-block}
+.pb-brand small{font-weight:500; color:var(--muted); font-size:12px}
+.mode-tabs{display:flex; gap:6px; background:var(--border-2); padding:4px; border-radius:11px}
+.mode-tabs button{
+  border:0; background:transparent; padding:7px 15px; border-radius:8px;
+  font-size:13.5px; font-weight:700; color:var(--muted); transition:.15s;
+}
+.mode-tabs button.on{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+.role-switch{margin-left:auto; display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted)}
+.role-switch .seg{display:flex; gap:4px; background:var(--border-2); padding:4px; border-radius:10px}
+.role-switch .seg button{border:0;background:transparent;padding:6px 13px;border-radius:7px;font-size:13px;font-weight:700;color:var(--muted)}
+.role-switch .seg button.on.admin{background:var(--admin); color:#fff}
+.role-switch .seg button.on.instructor{background:var(--instructor); color:#fff}
+
+.pb-index{display:flex; gap:22px; flex-wrap:wrap; margin-top:11px; padding-top:11px; border-top:1px dashed var(--border)}
+.idx-group{display:flex; align-items:baseline; gap:9px; flex-wrap:wrap}
+.idx-group .glabel{font-size:11px; font-weight:900; letter-spacing:.6px; text-transform:uppercase; color:var(--system)}
+.idx-group a{font-size:12px; color:var(--muted); text-decoration:none; padding:2px 4px; border-radius:5px}
+.idx-group a:hover{background:var(--border-2); color:var(--ink)}
+
+/* =========================================================
+   섹션 레이아웃
+   ========================================================= */
+.stage{max-width:1280px; margin:0 auto; padding:34px 22px 90px}
+.section{margin-top:46px; scroll-margin-top:150px}
+.section:first-of-type{margin-top:8px}
+.sec-head{display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap}
+.sec-head h2{font-size:20px}
+.sec-head .kicker{font-size:11px; font-weight:900; letter-spacing:.8px; text-transform:uppercase; color:var(--system)}
+.sec-head .rule{flex:1; height:1px; background:var(--border)}
+.screen-note{font-size:12.5px; color:var(--muted); background:var(--surface); border:1px solid var(--border); padding:10px 14px; border-radius:10px; margin-bottom:22px}
+.hidden{display:none !important}
+
+/* 화면 타이틀 캡션 (각 목업 위) */
+.cap{display:flex; align-items:center; gap:8px; margin-bottom:10px; scroll-margin-top:150px}
+.cap .num{width:24px;height:24px;border-radius:7px;background:var(--ink);color:#fff;font-size:12px;font-weight:900;display:grid;place-items:center}
+.cap .t{font-size:14px; font-weight:700}
+.cap .plat{font-size:10.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; padding:2px 7px; border-radius:20px}
+.plat.phone{background:var(--student-bg); color:var(--student)}
+.plat.browser{background:var(--admin-bg); color:var(--admin)}
+.plat.report{background:var(--instructor-bg); color:var(--instructor)}
+
+/* =========================================================
+   Phone frame (학생) — 명세 §4
+   ========================================================= */
+.phones{display:flex; flex-wrap:wrap; gap:30px}
+.phone-cell{display:flex; flex-direction:column}
+.phone{
+  width:310px; background:#0c1118; border-radius:40px; padding:11px;
+  box-shadow:0 10px 40px rgba(12,17,24,.28); position:relative; flex:none;
+}
+.phone .notch{position:absolute; top:11px; left:50%; transform:translateX(-50%); width:120px; height:24px; background:#0c1118; border-radius:0 0 16px 16px; z-index:5}
+.screen{background:#fff; border-radius:30px; overflow:hidden; height:640px; display:flex; flex-direction:column}
+.statusbar{display:flex; justify-content:space-between; align-items:center; padding:11px 22px 4px; font-size:12px; font-weight:700; color:var(--ink)}
+.statusbar .icons{display:flex; gap:5px; align-items:center; font-size:11px}
+.pscreen{padding:16px; overflow-y:auto; flex:1}
+.pscreen::-webkit-scrollbar{width:0}
+
+/* =========================================================
+   Browser frame (관리자·강사) — 명세 §4
+   ========================================================= */
+.browser{
+  background:#fff; border-radius:var(--radius); overflow:hidden;
+  border:1px solid var(--border); box-shadow:var(--shadow);
+}
+.bbar{display:flex; align-items:center; gap:8px; padding:11px 15px; background:#f2f4f7; border-bottom:1px solid var(--border)}
+.bbar .lights{display:flex; gap:7px}
+.bbar .lights i{width:12px;height:12px;border-radius:50%;display:block}
+.bbar .lights i:nth-child(1){background:#f5655b}
+.bbar .lights i:nth-child(2){background:#f6be4e}
+.bbar .lights i:nth-child(3){background:#5bc862}
+.bbar .url{flex:1; background:#fff; border:1px solid var(--border); border-radius:8px; padding:6px 13px; font-size:12px; color:var(--muted)}
+.app{display:flex; min-height:660px}
+.sidebar{width:210px; flex:none; background:var(--sidebar); color:#c6d0df; padding:18px 0; display:flex; flex-direction:column}
+.sb-brand{padding:0 20px 16px; display:flex; align-items:center; gap:9px; border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-brand .logo{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:13px;font-weight:900;color:#fff}
+.sb-brand b{color:#fff; font-size:15px; letter-spacing:-.2px}
+.sb-brand small{display:block; font-size:10.5px; color:#8794a8; font-weight:500}
+.nav{padding:12px 12px; display:flex; flex-direction:column; gap:2px; flex:1}
+.nav a{display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:9px; font-size:13.5px; color:#c6d0df; text-decoration:none; transition:.12s}
+.nav a .ic{width:17px; text-align:center; opacity:.85}
+.nav a:hover{background:rgba(255,255,255,.06); color:#fff}
+.nav a.on{background:rgba(255,255,255,.12); color:#fff; font-weight:700}
+.nav a.locked{color:#6b7688; cursor:not-allowed}
+.nav a.locked:hover{background:rgba(255,255,255,.03); color:#6b7688}
+.nav .navgroup{font-size:10px; font-weight:900; letter-spacing:.7px; text-transform:uppercase; color:#59657a; padding:14px 12px 6px}
+.sb-foot{padding:14px 20px 2px; border-top:1px solid rgba(255,255,255,.08); font-size:12px}
+.sb-foot .role-badge{display:inline-flex; align-items:center; gap:7px; padding:6px 11px; border-radius:20px; font-weight:700; font-size:12px; color:#fff}
+.sb-foot small{display:block; color:#8794a8; margin-bottom:7px; font-size:11px}
+
+.main{flex:1; background:#fbfcfd; padding:26px 28px; overflow-x:auto; min-width:0}
+.page-head{display:flex; align-items:flex-start; gap:14px; margin-bottom:22px; flex-wrap:wrap}
+.page-head h1{font-size:21px; letter-spacing:-.3px}
+.page-head .sub{font-size:13px; color:var(--muted); margin-top:3px}
+.page-head .spacer{flex:1}
+
+.appscreen{display:none}
+.appscreen.on{display:block; animation:fade .25s ease}
+@keyframes fade{from{opacity:0; transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* =========================================================
+   공통 컴포넌트
+   ========================================================= */
+.btn{border:1px solid transparent; border-radius:10px; padding:10px 16px; font-size:13.5px; font-weight:700; transition:.12s}
+.btn.primary{background:var(--primary); color:#fff}
+.btn.primary:hover{background:#1a2636}
+.btn.ghost{background:#fff; border-color:var(--border); color:var(--ink)}
+.btn.ghost:hover{border-color:#c3ccd6}
+.btn.danger{background:var(--danger); color:#fff}
+.btn.ok{background:var(--ok); color:#fff}
+.btn.sm{padding:6px 12px; font-size:12.5px; border-radius:8px}
+.btn.block{width:100%; text-align:center; display:block}
+.btn.lg{padding:14px 18px; font-size:15px; width:100%}
+.btn:disabled{opacity:.5; cursor:not-allowed}
+
+.card{background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:18px}
+.pcard{background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:15px}
+
+.field{margin-bottom:14px}
+.field label{display:block; font-size:12.5px; font-weight:700; color:var(--ink); margin-bottom:6px}
+.field .hint{font-size:11.5px; color:var(--muted); font-weight:400; margin-top:5px}
+.input{width:100%; border:1px solid var(--border); border-radius:10px; padding:10px 13px; font-size:13.5px; font-family:inherit; background:#fff; color:var(--ink)}
+.input:focus{outline:2px solid var(--student); outline-offset:1px; border-color:var(--student)}
+textarea.input{resize:vertical; min-height:70px}
+
+.seg-btns{display:flex; gap:8px; flex-wrap:wrap}
+.seg-btns button{flex:1; min-width:70px; border:1px solid var(--border); background:#fff; border-radius:10px; padding:10px; font-size:13px; font-weight:700; color:var(--muted)}
+.seg-btns button.on{border-color:var(--primary); background:var(--primary); color:#fff}
+
+.chk-list{display:flex; flex-direction:column; gap:9px}
+.chk{display:flex; align-items:center; gap:10px; padding:11px 13px; border:1px solid var(--border); border-radius:10px; font-size:13.5px; background:#fff}
+.chk input{width:17px;height:17px; accent-color:var(--primary)}
+.chk .lock{margin-left:auto; font-size:11px; color:var(--admin); font-weight:700}
+.chk.fixed{background:var(--border-2)}
+
+.summary{display:grid; grid-template-columns:repeat(4,1fr); gap:14px}
+.stat{background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:16px 17px}
+.stat .lbl{font-size:12px; color:var(--muted); font-weight:500}
+.stat .num{font-size:27px; font-weight:900; margin-top:5px; letter-spacing:-.5px}
+.stat .delta{font-size:11.5px; margin-top:3px; font-weight:700}
+.stat .bar{accent:0}
+
+/* 테이블 */
+.tbl-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); background:#fff}
+table{width:100%; border-collapse:collapse; font-size:13px; min-width:560px}
+thead th{background:#f4f6f9; text-align:left; padding:11px 14px; font-size:11.5px; font-weight:800; color:var(--muted); letter-spacing:.3px; white-space:nowrap; border-bottom:1px solid var(--border)}
+tbody td{padding:11px 14px; border-bottom:1px solid var(--border-2); white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#fafbfc}
+
+/* 상태 pill (§4) */
+.pill{display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:11.5px; font-weight:700; white-space:nowrap}
+.pill::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor}
+.pill.ok{background:var(--instructor-bg); color:var(--ok)}
+.pill.warn{background:#fbf1e0; color:var(--warn)}
+.pill.danger{background:#fbe9e7; color:var(--danger)}
+.pill.student{background:var(--student-bg); color:var(--student)}
+.pill.admin{background:var(--admin-bg); color:var(--admin)}
+.pill.system{background:#eef1f5; color:var(--system)}
+.pill.no::before{display:none}
+
+/* 진행바 / 스텝 */
+.progress{height:7px; background:var(--border-2); border-radius:10px; overflow:hidden}
+.progress > i{display:block; height:100%; background:var(--student); border-radius:10px}
+.steps{display:flex; gap:6px; margin:12px 0}
+.steps .st{flex:1; text-align:center; font-size:11px; font-weight:700; color:var(--muted); padding-bottom:7px; border-bottom:3px solid var(--border)}
+.steps .st.on{color:var(--student); border-color:var(--student)}
+.steps .st.done{color:var(--ok); border-color:var(--ok)}
+
+/* 학생 문항 UI */
+.qtag{font-size:11px; font-weight:800; color:var(--student); letter-spacing:.4px}
+.qtext{font-size:15.5px; font-weight:700; line-height:1.55; margin:9px 0 15px}
+.choices{display:flex; flex-direction:column; gap:9px}
+.choice{border:1px solid var(--border); border-radius:11px; padding:12px 14px; font-size:13.5px; display:flex; align-items:center; gap:11px; background:#fff; cursor:pointer; transition:.12s}
+.choice .k{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border); display:grid; place-items:center; font-size:12px; font-weight:800; color:var(--muted); flex:none}
+.choice.sel{border-color:var(--student); background:var(--student-bg)}
+.choice.sel .k{background:var(--student); color:#fff; border-color:var(--student)}
+.passage{background:var(--border-2); border:1px solid var(--border); border-radius:11px; padding:13px; font-size:12.5px; line-height:1.7; color:#33404f; margin-bottom:13px}
+
+/* 오디오 플레이어(파형) */
+.player{background:var(--student-bg); border:1px solid #d3e4f6; border-radius:12px; padding:13px; display:flex; align-items:center; gap:12px; margin-bottom:14px}
+.player .play{width:40px;height:40px;border-radius:50%; background:var(--student); color:#fff; border:0; font-size:15px; display:grid; place-items:center; flex:none}
+.wave{flex:1; display:flex; align-items:center; gap:2px; height:34px}
+.wave i{flex:1; background:var(--student); opacity:.5; border-radius:2px}
+.timer-chip{display:inline-flex; align-items:center; gap:6px; background:#fff; border:1px solid var(--border); padding:5px 11px; border-radius:20px; font-size:12px; font-weight:700}
+
+/* 녹음 */
+.recorder{text-align:center; padding:10px 0}
+.rec-btn{width:78px;height:78px;border-radius:50%; background:var(--danger); border:0; color:#fff; font-size:26px; display:grid; place-items:center; margin:0 auto; box-shadow:0 0 0 8px rgba(194,72,58,.12)}
+.rec-time{font-size:22px; font-weight:900; margin-top:12px; letter-spacing:1px}
+
+/* OCR */
+.ocr-preview{border:1px dashed var(--student); border-radius:11px; padding:13px; font-size:13px; line-height:1.8; background:#fbfdff}
+.ocr-preview .bad{background:#fbe9e7; color:var(--danger); border-radius:4px; padding:0 3px; font-weight:700; text-decoration:underline dotted}
+.dropzone{border:2px dashed var(--border); border-radius:12px; padding:26px 16px; text-align:center; color:var(--muted); background:#fbfcfd}
+.dropzone .big{font-size:30px; margin-bottom:6px}
+
+/* AI 피드백 카드 */
+.ai-card{background:linear-gradient(180deg,#f7f4fe,#fff); border:1px solid #e4dbf7; border-radius:12px; padding:14px}
+.ai-card .ai-h{display:flex; align-items:center; gap:7px; font-size:12px; font-weight:800; color:var(--admin); margin-bottom:8px}
+
+/* 루브릭 채점 3열 */
+.grade-grid{display:grid; grid-template-columns:230px 1fr 260px; gap:16px}
+.rubric-item{border:1px solid var(--border); border-radius:11px; padding:13px; margin-bottom:12px}
+.rubric-item .ri-h{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:13px; font-weight:700}
+.ai-score{background:var(--admin-bg); color:var(--admin); padding:2px 9px; border-radius:20px; font-size:12px; font-weight:800}
+.ai-reason{font-size:12px; color:var(--muted); line-height:1.6; background:#faf9fe; border-left:3px solid var(--admin); padding:8px 11px; border-radius:0 8px 8px 0; margin:8px 0}
+.score-input{display:flex; align-items:center; gap:8px}
+.score-input input{width:60px; text-align:center; font-weight:800; font-size:15px}
+.vs-box{background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center}
+.vs-num{font-size:34px; font-weight:900; letter-spacing:-1px}
+.vs-lbl{font-size:11px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.4px}
+.discrepancy{margin-top:12px; padding:10px; border-radius:10px; font-size:12.5px; font-weight:700; text-align:center}
+.discrepancy.big{background:#fbe9e7; color:var(--danger)}
+.discrepancy.okd{background:var(--instructor-bg); color:var(--ok)}
+
+/* 학생 리스트(채점 좌열) */
+.stu-list{display:flex; flex-direction:column; gap:6px}
+.stu-item{border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:13px; cursor:pointer}
+.stu-item.on{border-color:var(--admin); background:var(--admin-bg)}
+.stu-item .flag{font-size:11px; font-weight:800; color:var(--danger)}
+.stu-item .flag.ok{color:var(--ok)}
+
+/* 탭 */
+.tabs{display:flex; gap:6px; margin-bottom:16px; border-bottom:1px solid var(--border)}
+.tabs button{border:0; background:transparent; padding:9px 16px; font-size:13.5px; font-weight:700; color:var(--muted); border-bottom:2px solid transparent; margin-bottom:-1px}
+.tabs button.on{color:var(--ink); border-color:var(--primary)}
+
+/* 레이더 차트 라벨 */
+.radar-legend{display:flex; gap:16px; justify-content:center; font-size:12px; margin-top:8px}
+.radar-legend span{display:inline-flex; align-items:center; gap:6px; color:var(--muted)}
+.radar-legend i{width:14px; height:3px; border-radius:2px; display:inline-block}
+
+/* 잠금 배너 */
+.lock-banner{background:#fff8ee; border:1px solid #f0dcbb; border-radius:11px; padding:12px 14px; font-size:12.5px; color:#8a6414; display:flex; gap:9px; align-items:flex-start}
+.perm-note{font-size:12px; color:var(--muted); background:var(--border-2); border-radius:9px; padding:9px 12px; margin-top:10px}
+
+/* 모달 */
+.modal-overlay{position:fixed; inset:0; background:rgba(15,22,33,.5); display:none; align-items:center; justify-content:center; z-index:200; padding:20px}
+.modal-overlay.on{display:flex}
+.modal{background:#fff; border-radius:16px; padding:24px; max-width:340px; width:100%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal .m-ic{font-size:38px}
+.modal h3{font-size:17px; margin:12px 0 6px}
+.modal p{font-size:13px; color:var(--muted); margin-bottom:18px}
+.modal .m-btns{display:flex; gap:10px}
+.modal .m-btns .btn{flex:1}
+
+/* 급수 배지 */
+.grade-badge{display:inline-grid; place-items:center; width:38px; height:38px; border-radius:11px; background:var(--admin); color:#fff; font-weight:900; font-size:15px}
+.grade-badge.sm{width:28px;height:28px;font-size:12px;border-radius:8px}
+
+/* 미니 막대 (대시보드) */
+.minibars{display:flex; align-items:flex-end; gap:8px; height:64px; margin-top:10px}
+.minibars .mb{flex:1; background:var(--student); border-radius:4px 4px 0 0; opacity:.85; position:relative}
+.minibars .mb span{position:absolute; bottom:-18px; left:0; right:0; text-align:center; font-size:10px; color:var(--muted)}
+
+.grid-2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+.grid-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.mt{margin-top:14px}.mt2{margin-top:22px}
+.row-between{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap}
+
+/* =========================================================
+   반응형 (§4)
+   ========================================================= */
+@media (max-width:900px){
+  .grade-grid{grid-template-columns:1fr}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .summary{grid-template-columns:1fr 1fr}
+  .sidebar{width:180px}
+}
+@media (max-width:680px){
+  .summary{grid-template-columns:1fr 1fr}
+  .app{flex-direction:column}
+  .sidebar{width:100%; flex-direction:row; flex-wrap:wrap; overflow-x:auto}
+  .nav{flex-direction:row; flex-wrap:wrap; overflow-x:auto}
+  .pb-index{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     상단 컨트롤 + 화면 인덱스
+     ============================================================ -->
+<div class="protobar">
+  <div class="protobar-inner">
+    <div class="pb-top">
+      <div class="pb-brand">
+        <span class="dot"></span>
+        연세 어학당 · 한국어 배치고사
+        <small>UI 목업 프로토타입 · 총 23화면</small>
+      </div>
+      <div class="mode-tabs" id="modeTabs">
+        <button data-mode="all" class="on">전체 보기</button>
+        <button data-mode="entry">진입</button>
+        <button data-mode="student">학생</button>
+        <button data-mode="staff">관리자·강사</button>
+      </div>
+      <div class="role-switch" id="roleSwitch">
+        <span>웹 모드 권한 :</span>
+        <div class="seg">
+          <button class="on admin" data-role="admin">관리자</button>
+          <button class="instructor" data-role="instructor">강사</button>
+        </div>
+      </div>
+    </div>
+    <nav class="pb-index">
+      <div class="idx-group">
+        <span class="glabel">진입</span>
+        <a href="#s1">1 홈</a><a href="#s2">2 로그인·가입</a>
+      </div>
+      <div class="idx-group">
+        <span class="glabel">학생(모바일)</span>
+        <a href="#s3">3 학생홈</a><a href="#s4">4 응시안내</a><a href="#s5">5 어휘문법</a>
+        <a href="#s6">6 듣기</a><a href="#s7">7 읽기</a><a href="#s8">8 말하기·쓰기</a>
+        <a href="#s9">9 제출완료</a><a href="#s10">10 결과대기</a><a href="#s11">11 최종리포트</a>
+      </div>
+      <div class="idx-group">
+        <span class="glabel">관리자·강사(웹)</span>
+        <a href="#s12" data-app="dash">12 대시보드</a><a href="#s13" data-app="create">13 시험생성</a>
+        <a href="#s14" data-app="exams">14 시험목록</a><a href="#s15" data-app="enroll">15 학생등록</a>
+        <a href="#s16" data-app="students">16 학생목록</a><a href="#s17" data-app="live">17 응시현황</a>
+        <a href="#s18" data-app="gradelist">18 채점목록</a><a href="#s19" data-app="grade">19 채점(루브릭)</a>
+        <a href="#s20" data-app="verify">20 채점검증</a><a href="#s21" data-app="class">21 분반결과</a>
+        <a href="#s22" data-app="settings">22 배점·커트라인</a><a href="#s23" data-app="teacher">23 강사홈</a>
+      </div>
+    </nav>
+  </div>
+</div>
+
+<div class="stage">
+
+<!-- ============================================================
+     A. 진입
+     ============================================================ -->
+<section class="section" id="sec-entry" data-mode="entry">
+  <div class="sec-head">
+    <span class="kicker">Group A</span>
+    <h2>공통 · 진입</h2>
+    <span class="rule"></span>
+    <span class="pill system no">phone · 2화면</span>
+  </div>
+
+  <div class="phones">
+    <!-- 1. 진입 홈 -->
+    <div class="phone-cell">
+      <div class="cap" id="s1"><span class="num">1</span><span class="t">진입 홈페이지</span><span class="plat phone">phone</span></div>
+      <div class="phone"><div class="notch"></div><div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="icons">📶 5G 🔋</span></div>
+        <div class="pscreen">
+          <div class="row-between">
+            <span class="pill system no" style="background:var(--student-bg);color:var(--student)">연세 어학당</span>
+            <select class="input" style="width:auto; padding:6px 8px; font-size:12px"><option>한국어 ▾</option><option>EN</option></select>
+          </div>
+          <div style="text-align:center; margin-top:34px">
+            <div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--student),var(--admin));margin:0 auto 18px"></div>
+            <h1 style="font-size:22px; line-height:1.35">나의 한국어 급수를<br>확인해 보세요</h1>
+            <p class="muted small" style="margin-top:12px">한국어 배치고사 · 약 35분 · 5개 영역<br>어휘문법 · 듣기 · 읽기 · 말하기 · 쓰기</p>
+          </div>
+          <div style="margin-top:34px; display:flex; flex-direction:column; gap:10px">
+            <button class="btn primary lg">배치고사 시작하기</button>
+            <button class="btn ghost lg">로그인 / 인증코드로 가입</button>
+            <button class="btn" style="background:none;color:var(--muted);font-size:12.5px">로그인 없이 먼저 둘러보기 (맛보기) →</button>
+          </div>
+          <p class="muted" style="font-size:10.5px;text-align:center;margin-top:26px">© 2026 Yonsei KLI · 개인정보 처리방침</p>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 2. 로그인/회원가입 -->
+    <div class="phone-cell">
+      <div class="cap" id="s2"><span class="num">2</span><span class="t">로그인 / 회원가입</span><span class="plat phone">phone</span></div>
+      <div class="phone"><div class="notch"></div><div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="icons">📶 5G 🔋</span></div>
+        <div class="pscreen">
+          <h1 style="font-size:19px; margin-top:6px">시작하기</h1>
+          <div class="tabs" style="margin-top:14px">
+            <button class="on" onclick="ptab(this,'lg-login')">로그인</button>
+            <button onclick="ptab(this,'lg-join')">인증코드 가입</button>
+          </div>
+          <div id="lg-login">
+            <div class="field"><label>아이디</label><input class="input" placeholder="아이디 입력"></div>
+            <div class="field"><label>비밀번호</label><input class="input" type="password" placeholder="비밀번호"></div>
+            <button class="btn primary lg mt">로그인</button>
+            <p class="muted small" style="text-align:center;margin-top:12px">비밀번호를 잊으셨나요?</p>
+          </div>
+          <div id="lg-join" class="hidden">
+            <div class="ai-card" style="margin-bottom:14px; background:var(--student-bg); border-color:#cfe1f5">
+              <div style="font-size:12px; color:var(--student); font-weight:700">✓ 가입 완료 시 배치고사가 자동으로 세팅됩니다</div>
+            </div>
+            <div class="field"><label>이름</label><input class="input" placeholder="홍길동"></div>
+            <div class="field"><label>아이디</label><input class="input" placeholder="아이디"></div>
+            <div class="field"><label>비밀번호</label><input class="input" type="password" placeholder="비밀번호"></div>
+            <div class="field"><label>학교 공통 인증코드</label><input class="input" placeholder="예: YSKLI-2026-A1"><span class="hint">🏫 학교(관리자)가 <b>문자·이메일·안내문으로 공지한 공통 코드</b>를 입력하세요. 우리 시험 응시생은 모두 같은 코드를 씁니다.</span></div>
+            <p class="small muted" style="margin:-4px 0 12px">코드를 못 받으셨나요? 학교 담당자에게 문의하거나 관리자에게 <b>안내 재발송</b>을 요청하세요.</p>
+            <button class="btn primary lg mt">가입하고 배치고사 시작</button>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     B. 학생 (모바일)
+     ============================================================ -->
+<section class="section" id="sec-student" data-mode="student">
+  <div class="sec-head">
+    <span class="kicker">Group B</span>
+    <h2>학생 · 모바일 응시</h2>
+    <span class="rule"></span>
+    <span class="pill student no">phone · 9화면</span>
+  </div>
+  <div class="screen-note">💡 적응형: <b>어휘·문법을 먼저</b> 평가해 수준을 자동 판정하고, 이후 듣기·읽기·말하기·쓰기 문항 난이도를 결정합니다. <b>이 판정은 학생 화면에 노출되지 않습니다.</b></div>
+
+  <div class="phones">
+    <!-- 3. 학생 홈 -->
+    <div class="phone-cell">
+      <div class="cap" id="s3"><span class="num">3</span><span class="t">학생 홈</span><span class="plat phone">phone</span></div>
+      <div class="phone"><div class="notch"></div><div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="icons">📶 5G 🔋</span></div>
+        <div class="pscreen">
+          <div class="row-between"><h2 style="font-size:17px">안녕하세요, 홍길동님 👋</h2><span style="font-size:20px">🔔</span></div>
+          <div class="pcard mt" style="background:linear-gradient(135deg,var(--student),#2559a0); color:#fff; border:0">
+            <div style="font-size:11px; opacity:.85; font-weight:700">2026-2 가을학기 배치고사</div>
+            <div style="font-size:16px; font-weight:900; margin-top:5px">아직 응시 전이에요</div>
+            <div style="font-size:11.5px; opacity:.9; margin-top:8px">응시 기간 · 2026.08.20 ~ 08.31</div>
+            <button class="btn lg" style="background:#fff; color:var(--student); margin-top:14px">응시 시작 →</button>
+          </div>
+          <div class="steps mt2">
+            <div class="st on">① 응시</div><div class="st">② 채점</div><div class="st">③ 결과</div>
+          </div>
+          <div class="pcard mt" style="font-size:12.5px; color:var(--muted); line-height:1.7">
+            <b style="color:var(--ink)">안내</b><br>· 조용한 곳에서 응시해 주세요<br>· 말하기는 마이크, 쓰기는 카메라 권한이 필요해요<br>· 중간 저장 후 이어서 응시할 수 있어요
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 4. 응시 안내 -->
+    <div class="phone-cell">
+      <div class="cap" id="s4"><span class="num">4</span><span class="t">응시 안내</span><span class="plat phone">phone</span></div>
+      <div class="phone"><div class="notch"></div><div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="icons">📶 5G 🔋</span></div>
+        <div class="pscreen">
+          <h2 style="font-size:17px">응시 안내</h2>
+          <div class="pcard mt" style="text-align:center">
+            <div style="font-size:30px">⏱️</div>
+            <div style="font-size:15px; font-weight:900; margin-top:6px">약 35분 · 5개 영역</div>
+          </div>
+          <p class="small muted mt2" style="font-weight:700; color:var(--ink)">평가 순서</p>
+          <div class="mt" style="display:flex; flex-direction:column; gap:8px">
+            <div class="chk"><span style="width:20px">1️⃣</span> 어휘·문법 <span class="muted small" style="margin-left:auto">선행</span></div>
+            <div class="chk"><span style="width:20px">2️⃣</span> 듣기</div>
+            <div class="chk"><span style="width:20px">3️⃣</span> 읽기</div>
+            <div class="chk"><span style="width:20px">4️⃣</span> 말하기 <span class="muted small" style="margin-left:auto">녹음</span></div>
+            <div class="chk"><span style="width:20px">5️⃣</span> 쓰기 <span class="muted small" style="margin-left:auto">사진</span></div>
+          </div>
+          <div class="lock-banner mt2" style="background:var(--student-bg); border-color:#cfe1f5; color:var(--student)">ℹ️ 응시 중 앱을 벗어나면 자동 임시저장되며, 이어서 응시할 수 있습니다.</div>
+          <button class="btn primary lg mt2">시작하기</button>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 5. 어휘·문법 -->
+    <div class="phone-cell">
+      <div class="cap" id="s5"><span class="num">5</span><span class="t">어휘·문법 평가 (선행)</span><span class="plat phone">phone</span></div>
+      <div class="phone"><div class="notch"></div><div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="icons">📶 5G 🔋</span></div>
+        <div class="pscreen">
+          <div class="row-between"><span class="qtag">어휘·문법</span><span class="timer-chip mono">⏱ 08:24</span></div>
+          <div class="steps"><div class="st on">어휘문법</div><div class="st">듣기</div><div class="st">읽기</div><div class="st">말·쓰기</div></div>
+          <div class="progress"><i style="width:30%"></i></div>
+          <p class="small muted" style="margin-top:6px">문항 6 / 20</p>
+          <div class="mt2">
+            <div class="qtext">다음 빈칸에 알맞은 것을 고르세요.<br><span style="color:var(--student)">"어제 친구______ 영화를 봤어요."</span></div>
+            <div class="choices">
+              <label class="choice" onclick="pickChoice(this)"><span class="k">1</span> 을</label>
+              <label class="choice sel" onclick="pickChoice(this)"><span class="k">2</span> 와</label>
+              <label class="choice" onclick="pickChoice(this)"><span class="k">3</span> 에서</label>
+              <label class="choice" onclick="pickChoice(this)"><span class="k">4</span> 으로</label>
+            </div>
+          </div>
+          <div class="row-between mt2">
+            <button class="btn ghost sm">← 이전</button>
+            <button class="btn ghost sm">임시저장</button>
+            <button class="btn primary sm">다음 문항 →</button>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 6. 듣기 -->
+    <div class="phone-cell">
+      <div class="cap" id="s6"><span class="num">6</span><span class="t">듣기 평가</span><span class="plat phone">phone</span></div>
+      <div class="phone"><div class="notch"></div><div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="icons">📶 5G 🔋</span></div>
+        <div class="pscreen">
+          <div class="row-between"><span class="qtag">듣기</span><span class="timer-chip mono">⏱ 05:10</span></div>
+          <div class="steps"><div class="st done">어휘문법</div><div class="st on">듣기</div><div class="st">읽기</div><div class="st">말·쓰기</div></div>
+          <div class="progress"><i style="width:20%; background:var(--student)"></i></div>
+          <p class="small muted" style="margin-top:6px">문항 2 / 10</p>
+          <div class="player mt">
+            <button class="play">▶</button>
+            <div class="wave">
+              <i style="height:40%"></i><i style="height:70%"></i><i style="height:100%"></i><i style="height:55%"></i><i style="height:80%"></i><i style="height:35%"></i><i style="height:90%"></i><i style="height:60%"></i><i style="height:45%"></i><i style="height:75%"></i><i style="height:30%"></i><i style="height:65%"></i>
+            </div>
+            <span class="small mono muted">0:12</span>
+          </div>
+          <div class="qtext">대화를 듣고 남자가 가려는 곳을 고르세요.</div>
+          <div class="choices">
+            <label class="choice" onclick="pickChoice(this)"><span class="k">1</span> 은행</label>
+            <label class="choice" onclick="pickChoice(this)"><span class="k">2</span> 우체국</label>
+            <label class="choice sel" onclick="pickChoice(this)"><span class="k">3</span> 병원</label>
+            <label class="choice" onclick="pickChoice(this)"><span class="k">4</span> 도서관</label>
+          </div>
+          <button class="btn primary block mt2">다음 문항 →</button>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 7. 읽기 -->
+    <div class="phone-cell">
+      <div class="cap" id="s7"><span class="num">7</span><span class="t">읽기 평가</span><span class="plat phone">phone</span></div>
+      <div class="phone"><div class="notch"></div><div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="icons">📶 5G 🔋</span></div>
+        <div class="pscreen">
+          <div class="row-between"><span class="qtag">읽기</span><span class="timer-chip mono">⏱ 07:45</span></div>
+          <div class="steps"><div class="st done">어휘문법</div><div class="st done">듣기</div><div class="st on">읽기</div><div class="st">말·쓰기</div></div>
+          <div class="passage">
+            요즘 많은 사람들이 건강을 위해 자전거를 탑니다. 자전거는 환경에도 좋고 운동도 됩니다.
+            그래서 시청에서는 시민들이 자전거를 쉽게 빌릴 수 있도록 여러 곳에 자전거 대여소를 만들었습니다.
+          </div>
+          <div class="qtext">이 글의 중심 내용으로 알맞은 것은?</div>
+          <div class="choices">
+            <label class="choice sel" onclick="pickChoice(this)"><span class="k">1</span> 자전거 이용의 장점과 대여소 설치</label>
+            <label class="choice" onclick="pickChoice(this)"><span class="k">2</span> 자전거 사고의 위험성</label>
+            <label class="choice" onclick="pickChoice(this)"><span class="k">3</span> 시청의 예산 부족 문제</label>
+            <label class="choice" onclick="pickChoice(this)"><span class="k">4</span> 대중교통 이용 방법</label>
+          </div>
+          <button class="btn primary block mt2">다음 문항 →</button>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 8. 말하기·쓰기 -->
+    <div class="phone-cell">
+      <div class="cap" id="s8"><span class="num">8</span><span class="t">말하기 · 쓰기</span><span class="plat phone">phone</span></div>
+      <div class="phone"><div class="notch"></div><div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="icons">📶 5G 🔋</span></div>
+        <div class="pscreen">
+          <div class="tabs"><button class="on" onclick="ptab(this,'sp-tab')">말하기</button><button onclick="ptab(this,'wr-tab')">쓰기</button></div>
+          <div id="sp-tab">
+            <div class="qtext" style="font-size:14px">다음 주제로 1분간 말해 보세요.<br><span style="color:var(--student)">"내가 좋아하는 계절과 그 이유"</span></div>
+            <div class="recorder pcard">
+              <button class="rec-btn">●</button>
+              <div class="rec-time mono">0:24</div>
+              <p class="small muted" style="margin-top:8px">녹음 중… 다시 하려면 정지 후 재녹음</p>
+              <div class="wave mt" style="height:26px">
+                <i style="height:50%"></i><i style="height:80%"></i><i style="height:40%"></i><i style="height:100%"></i><i style="height:60%"></i><i style="height:30%"></i><i style="height:75%"></i><i style="height:45%"></i>
+              </div>
+            </div>
+            <button class="btn primary block mt2">녹음 완료 · 쓰기로 →</button>
+          </div>
+          <div id="wr-tab" class="hidden">
+            <div class="qtext" style="font-size:14px">주제에 맞게 200자 내외로 쓰고 사진을 올려 주세요.</div>
+            <div class="dropzone"><div class="big">📷</div>사진 촬영 / 업로드</div>
+            <p class="small muted mt" style="font-weight:700; color:var(--ink)">OCR 인식 결과 (오인식 글자 확인·수정)</p>
+            <div class="ocr-preview mt">
+              저는 봄을 가장 좋아합니다. 날씨가 <span class="bad">따뜻</span>하고 꽃이 많이 <span class="bad">핍니다</span>.
+              봄에는 친구들과 공원에서 산책을 합니다…
+            </div>
+            <div class="lock-banner mt" style="background:#fbe9e7;border-color:#f0c9c3;color:var(--danger)">⚠️ 빨간색 글자는 오인식일 수 있어요. 눌러서 수정하세요.</div>
+            <button class="btn primary block mt2" onclick="openModal()">확인했어요 · 제출하기</button>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 9. 제출 완료 -->
+    <div class="phone-cell">
+      <div class="cap" id="s9"><span class="num">9</span><span class="t">제출 완료</span><span class="plat phone">phone</span></div>
+      <div class="phone"><div class="notch"></div><div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="icons">📶 5G 🔋</span></div>
+        <div class="pscreen" style="display:flex; flex-direction:column; justify-content:center; text-align:center">
+          <div style="width:78px;height:78px;border-radius:50%;background:var(--instructor-bg);color:var(--ok);font-size:40px;display:grid;place-items:center;margin:0 auto">✓</div>
+          <h1 style="font-size:21px; margin-top:18px">제출 완료!</h1>
+          <p class="muted small" style="margin-top:12px; line-height:1.7">어휘문법 · 듣기 · 읽기 결과는 <b style="color:var(--ok)">지금 바로</b> 확인할 수 있어요.<br>말하기 · 쓰기는 <b style="color:var(--warn)">채점 후 알림</b>으로 알려드릴게요.</p>
+          <div style="display:flex; flex-direction:column; gap:10px; margin-top:30px">
+            <button class="btn primary lg">내 결과 보기</button>
+            <button class="btn ghost lg">홈으로</button>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 10. 결과 대기 -->
+    <div class="phone-cell">
+      <div class="cap" id="s10"><span class="num">10</span><span class="t">결과 대기 (중간 상태)</span><span class="plat report">report</span></div>
+      <div class="phone"><div class="notch"></div><div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="icons">📶 5G 🔋</span></div>
+        <div class="pscreen">
+          <h2 style="font-size:17px">내 결과</h2>
+          <div class="pcard mt" style="text-align:center; background:var(--border-2)">
+            <div class="small muted">종합 급수 · 레이더 차트</div>
+            <div style="font-size:15px; font-weight:900; margin-top:6px; color:var(--warn)">말하기·쓰기 확정 후 공개</div>
+          </div>
+          <p class="small muted mt2" style="font-weight:700;color:var(--ink)">실시간 채점 완료</p>
+          <div class="mt" style="display:flex; flex-direction:column; gap:8px">
+            <div class="chk"><b>어휘·문법</b><span class="grade-badge sm" style="margin-left:auto">5급</span></div>
+            <div class="chk"><b>듣기</b><span class="grade-badge sm" style="margin-left:auto">5급</span></div>
+            <div class="chk"><b>읽기</b><span class="grade-badge sm" style="margin-left:auto">4급</span></div>
+          </div>
+          <p class="small muted mt2" style="font-weight:700;color:var(--ink)">채점 대기</p>
+          <div class="mt" style="display:flex; flex-direction:column; gap:8px">
+            <div class="chk"><b>말하기</b><span class="pill warn" style="margin-left:auto">채점 대기</span></div>
+            <div class="chk"><b>쓰기</b><span class="pill warn" style="margin-left:auto">채점 대기</span></div>
+          </div>
+          <div class="ai-card mt2"><div class="ai-h">✦ AI 개인화 피드백 <span class="pill warn no" style="font-size:10px">채점 대기</span></div><p class="small muted">전체 영역 확정 후 맞춤 학습 피드백이 제공됩니다.</p></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 11. 최종 결과 리포트 -->
+    <div class="phone-cell" style="width:auto">
+      <div class="cap" id="s11"><span class="num">11</span><span class="t">최종 결과 리포트</span><span class="plat report">report</span></div>
+      <div class="card" style="max-width:720px">
+        <div class="grid-2" style="gap:22px">
+          <div>
+            <div class="ai-card">
+              <div class="ai-h">✦ AI 개인화 피드백</div>
+              <div class="row-between"><span class="small muted">예상 급수</span><span class="grade-badge">5급</span></div>
+              <p class="small mt" style="line-height:1.7"><b>현재 수준</b> · 일상 대화와 실용 글을 무리 없이 이해합니다. 중급 후반 수준으로, <b style="color:var(--student)">정규 5급반</b> 수업을 권장합니다.</p>
+              <p class="small mt" style="line-height:1.7"><b>어휘·문법 상세</b> · 조사·연결어미는 안정적이나 <span style="color:var(--danger)">피동/사동 표현</span>과 <span style="color:var(--danger)">한자어 어휘</span>에서 실수가 관찰됩니다.</p>
+              <p class="small mt" style="line-height:1.7"><b>권장 학습</b> · ① 피동·사동 문형 집중 ② 신문 사설 읽기 ③ 발표 말하기 연습</p>
+            </div>
+          </div>
+          <div>
+            <p class="small" style="font-weight:800; text-align:center; margin-bottom:6px">영역별 성취도</p>
+            <div id="radar-holder" style="display:grid;place-items:center"></div>
+            <div class="radar-legend">
+              <span><i style="background:var(--admin)"></i> 내 성취도</span>
+              <span><i style="background:var(--muted); height:0; border-top:2px dashed var(--muted)"></i> 응시자 평균</span>
+            </div>
+            <div class="tbl-wrap mt2" style="box-shadow:none">
+              <table style="min-width:auto">
+                <thead><tr><th>영역</th><th>급수</th><th>백분율</th></tr></thead>
+                <tbody>
+                  <tr><td>어휘·문법</td><td><span class="pill admin no">5급</span></td><td class="mono">88%</td></tr>
+                  <tr><td>읽기</td><td><span class="pill admin no">5급</span></td><td class="mono">82%</td></tr>
+                  <tr><td>듣기</td><td><span class="pill admin no">5급</span></td><td class="mono">80%</td></tr>
+                  <tr><td>말하기</td><td><span class="pill admin no">4급</span></td><td class="mono">72%</td></tr>
+                  <tr><td>쓰기</td><td><span class="pill admin no">4급</span></td><td class="mono">68%</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <button class="btn ghost block mt2">📄 결과 리포트 PDF 저장</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     C. 관리자 · 강사 (웹) — 하나의 브라우저 프레임 안에서 사이드바로 전환
+     ============================================================ -->
+<section class="section" id="sec-staff" data-mode="staff">
+  <div class="sec-head">
+    <span class="kicker">Group C</span>
+    <h2>관리자 · 강사 · 웹</h2>
+    <span class="rule"></span>
+    <span class="pill admin no" id="rolePillTop">현재: 관리자</span>
+  </div>
+  <div class="screen-note">💡 관리자와 강사는 <b>같은 화면을 공유</b>하며 권한으로 분기합니다. 상단 우측 <b>[관리자 / 강사]</b> 토글로 전환하세요. 강사 모드에서는 잠긴 기능이 사이드바에 🔒로 표시됩니다. 왼쪽 사이드바 메뉴를 눌러 12개 화면을 이동할 수 있습니다.</div>
+
+  <div class="browser" id="s12">
+    <div class="bbar">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="url">🔒 placement.yonsei-kli.ac.kr / admin</div>
+    </div>
+    <div class="app">
+      <!-- 사이드바 -->
+      <aside class="sidebar">
+        <div class="sb-brand">
+          <span class="logo" id="sbLogo" style="background:var(--admin)">배</span>
+          <span><b>배치고사</b><small id="sbBrandSub">관리자 콘솔</small></span>
+        </div>
+        <nav class="nav" id="appNav">
+          <a class="on" data-app="dash" onclick="goApp('dash')"><span class="ic">▦</span> 대시보드</a>
+          <a data-app="create" data-admin onclick="goApp('create')"><span class="ic">＋</span> 시험 생성</a>
+          <a data-app="exams" onclick="goApp('exams')"><span class="ic">▤</span> 시험 목록</a>
+          <a data-app="enroll" data-admin onclick="goApp('enroll')"><span class="ic">⇪</span> 학생 등록</a>
+          <a data-app="students" onclick="goApp('students')"><span class="ic">👥</span> 학생 목록</a>
+          <a data-app="live" onclick="goApp('live')"><span class="ic">●</span> 응시 현황</a>
+          <a data-app="gradelist" onclick="goApp('gradelist')"><span class="ic">✎</span> 채점 목록</a>
+          <a data-app="grade" onclick="goApp('grade')"><span class="ic">◈</span> 채점 (루브릭)</a>
+          <a data-app="verify" data-admin onclick="goApp('verify')"><span class="ic">⚖</span> 채점 검증</a>
+          <a data-app="class" data-admin onclick="goApp('class')"><span class="ic">▥</span> 분반 결과</a>
+          <a data-app="settings" data-admin onclick="goApp('settings')"><span class="ic">⚙</span> 설정</a>
+          <a data-app="teacher" class="hidden" onclick="goApp('teacher')"><span class="ic">🏠</span> 강사 홈</a>
+        </nav>
+        <div class="sb-foot">
+          <small>현재 권한</small>
+          <span class="role-badge" id="sbRoleBadge" style="background:var(--admin)">👤 관리자</span>
+        </div>
+      </aside>
+
+      <!-- 메인 -->
+      <div class="main">
+
+        <!-- 12. 대시보드 -->
+        <div class="appscreen on" data-app="dash">
+          <div class="page-head"><div><h1>대시보드</h1><div class="sub">2026-2 가을학기 배치고사 · 운영 현황</div></div><div class="spacer"></div><button class="btn primary" data-admin-btn onclick="goApp('create')">＋ 새 시험 만들기</button></div>
+          <div class="summary">
+            <div class="stat"><div class="lbl">진행 중 시험</div><div class="num mono">2</div><div class="delta" style="color:var(--student)">● 응시 오픈</div></div>
+            <div class="stat"><div class="lbl">응시 완료</div><div class="num mono">128</div><div class="delta" style="color:var(--ok)">전체 156명 중</div></div>
+            <div class="stat"><div class="lbl">채점 대기</div><div class="num mono">42</div><div class="delta" style="color:var(--warn)">말하기·쓰기</div></div>
+            <div class="stat"><div class="lbl">분반 대기</div><div class="num mono">86</div><div class="delta" style="color:var(--admin)">확정 필요</div></div>
+          </div>
+          <div class="grid-2 mt2">
+            <div class="card">
+              <div class="row-between"><h3 style="font-size:15px">최근 시험</h3><a class="small" style="color:var(--student);cursor:pointer" onclick="goApp('exams')">전체 보기 →</a></div>
+              <div class="tbl-wrap mt" style="box-shadow:none;border:0">
+                <table>
+                  <thead><tr><th>시험명</th><th>상태</th><th>응시/완료</th></tr></thead>
+                  <tbody>
+                    <tr><td>2026-2 가을학기 배치고사</td><td><span class="pill student">진행중</span></td><td class="mono">156 / 128</td></tr>
+                    <tr><td>2026-2 편입생 배치고사</td><td><span class="pill student">진행중</span></td><td class="mono">40 / 22</td></tr>
+                    <tr><td>2026-1 봄학기 배치고사</td><td><span class="pill system">마감</span></td><td class="mono">210 / 210</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <h3 style="font-size:15px">최근 7일 응시 추이</h3>
+              <div class="minibars">
+                <div class="mb" style="height:40%"><span>월</span></div>
+                <div class="mb" style="height:65%"><span>화</span></div>
+                <div class="mb" style="height:55%"><span>수</span></div>
+                <div class="mb" style="height:90%"><span>목</span></div>
+                <div class="mb" style="height:75%"><span>금</span></div>
+                <div class="mb" style="height:35%"><span>토</span></div>
+                <div class="mb" style="height:50%"><span>일</span></div>
+              </div>
+              <div class="row-between mt2" style="margin-top:28px">
+                <button class="btn ghost sm" onclick="goApp('gradelist')">채점하러 가기</button>
+                <button class="btn ghost sm" onclick="goApp('live')">응시 현황 보기</button>
+                <button class="btn ghost sm" data-admin-btn onclick="goApp('class')">분반 확정하기</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 13. 시험 생성 -->
+        <div class="appscreen" data-app="create">
+          <div class="page-head"><div><h1>시험 생성</h1><div class="sub">새 배치고사를 만들고 평가 영역을 구성합니다</div></div></div>
+          <div class="grid-2">
+            <div class="card">
+              <div class="field"><label>시험명</label><input class="input" value="2026-2 가을학기 배치고사"></div>
+              <div class="grid-2" style="gap:12px">
+                <div class="field"><label>응시 시작</label><input class="input" type="date" value="2026-08-20"></div>
+                <div class="field"><label>응시 종료</label><input class="input" type="date" value="2026-08-31"></div>
+              </div>
+              <div class="field"><label>등급 체계</label>
+                <div class="seg-btns"><button onclick="seg(this)">4급</button><button onclick="seg(this)">6급</button><button class="on" onclick="seg(this)">8급</button></div>
+                <span class="hint">파일럿은 8급 체계(1~8급)를 사용합니다.</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="field"><label>평가 영역</label>
+                <div class="chk-list">
+                  <label class="chk fixed"><input type="checkbox" checked disabled> 어휘·문법 <span class="lock">선행 · 고정</span></label>
+                  <label class="chk"><input type="checkbox" checked> 듣기</label>
+                  <label class="chk"><input type="checkbox" checked> 읽기</label>
+                  <label class="chk"><input type="checkbox" checked> 말하기 <span class="muted small" style="margin-left:auto">인간 채점</span></label>
+                  <label class="chk"><input type="checkbox" checked> 쓰기 <span class="muted small" style="margin-left:auto">인간 채점</span></label>
+                </div>
+              </div>
+              <label class="chk mt"><input type="checkbox" checked> 수준별 문항 랜덤 출제 <span class="muted small" style="margin-left:auto">적응형</span></label>
+              <div class="perm-note">어휘·문법 점수로 수준을 자동 판정 → 이후 영역 난이도 결정 (학생 비노출)</div>
+              <button class="btn primary block mt2">시험 생성</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 14. 시험 목록 -->
+        <div class="appscreen" data-app="exams">
+          <div class="page-head"><div><h1>시험 목록</h1><div class="sub">전체 배치고사 관리</div></div><div class="spacer"></div><button class="btn primary" data-admin-btn onclick="goApp('create')">＋ 새 시험</button></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>시험명</th><th>등급체계</th><th>응시 기간</th><th>상태</th><th>응시/완료</th><th>채점</th><th>관리</th></tr></thead>
+              <tbody>
+                <tr><td><b>2026-2 가을학기 배치고사</b></td><td>8급</td><td class="mono small">08.20~08.31</td><td><span class="pill student">진행중</span></td><td class="mono">156 / 128</td><td class="mono">86 / 128</td><td><button class="btn ghost sm">오픈됨</button></td></tr>
+                <tr><td><b>2026-2 편입생 배치고사</b></td><td>8급</td><td class="mono small">08.25~09.01</td><td><span class="pill student">진행중</span></td><td class="mono">40 / 22</td><td class="mono">10 / 22</td><td><button class="btn ghost sm">오픈됨</button></td></tr>
+                <tr><td><b>2026-겨울 특별과정 배치고사</b></td><td>6급</td><td class="mono small">12.01~12.10</td><td><span class="pill warn">예정</span></td><td class="mono">0 / 0</td><td class="mono">—</td><td><button class="btn primary sm">오픈</button></td></tr>
+                <tr><td><b>2026-1 봄학기 배치고사</b></td><td>8급</td><td class="mono small">02.15~02.28</td><td><span class="pill system">마감</span></td><td class="mono">210 / 210</td><td class="mono">210 / 210</td><td><button class="btn ghost sm">보기</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 15. 학생 등록 -->
+        <div class="appscreen" data-app="enroll">
+          <div class="page-head"><div><h1>학생 등록</h1><div class="sub">엑셀로 학생을 일괄 등록하고, 학교 공통 인증코드를 안내합니다</div></div></div>
+
+          <!-- 학교 공통 인증코드 카드 -->
+          <div class="card" style="border-color:#cfe1f5; background:var(--student-bg); margin-bottom:16px">
+            <div class="row-between">
+              <div>
+                <div class="small" style="font-weight:800; color:var(--student)">🏫 학교 공통 인증코드 · 2026-2 가을학기 배치고사</div>
+                <div class="small muted mt" style="margin-top:6px">이 시험의 <b>모든 학생이 같은 코드</b>로 가입합니다. 코드는 학생이 만드는 게 아니라 <b>시스템이 시험별로 자동 생성</b>합니다.</div>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px">
+                <span class="mono" style="font-size:24px; font-weight:900; letter-spacing:1px; color:var(--student)">YSKLI-2026-A1</span>
+                <div style="display:flex; flex-direction:column; gap:6px">
+                  <button class="btn ghost sm">📋 복사</button>
+                  <button class="btn ghost sm">🔄 코드 재발급</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card">
+              <div class="dropzone"><div class="big">⇪</div><b>엑셀 파일을 여기에 드롭</b><div class="small mt">또는 클릭하여 업로드 · .xlsx</div></div>
+              <button class="btn ghost block mt">📥 등록 템플릿 다운로드</button>
+              <div class="perm-note mt">💡 엑셀에는 <b>이름·아이디·초기PW</b>만 넣으면 됩니다. 인증코드 열은 필요 없습니다. <b>등록 확정</b> 시 위 <b>공통 코드가 문자·이메일·안내문으로 일괄 발송</b>되고, 학생은 가입할 때 이 코드를 입력합니다.</div>
+              <div class="summary mt2" style="grid-template-columns:1fr 1fr 1fr; gap:10px">
+                <div class="stat" style="padding:12px"><div class="lbl">성공</div><div class="num mono" style="font-size:22px; color:var(--ok)">154</div></div>
+                <div class="stat" style="padding:12px"><div class="lbl">중복</div><div class="num mono" style="font-size:22px; color:var(--warn)">2</div></div>
+                <div class="stat" style="padding:12px"><div class="lbl">오류</div><div class="num mono" style="font-size:22px; color:var(--danger)">1</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <h3 style="font-size:14px; margin-bottom:10px">미리보기</h3>
+              <div class="tbl-wrap" style="box-shadow:none">
+                <table style="min-width:auto; font-size:12px">
+                  <thead><tr><th>이름</th><th>아이디</th><th>초기PW</th><th>반</th><th>상태</th></tr></thead>
+                  <tbody>
+                    <tr><td>김서연</td><td>seoyeon</td><td class="mono">a8f2</td><td>미배정</td><td><span class="pill ok no">정상</span></td></tr>
+                    <tr><td>이준호</td><td>junho</td><td class="mono">k3d9</td><td>미배정</td><td><span class="pill ok no">정상</span></td></tr>
+                    <tr><td>박지민</td><td>jimin</td><td class="mono">z1p7</td><td>미배정</td><td><span class="pill warn no">중복</span></td></tr>
+                    <tr><td>—</td><td>(빈값)</td><td>—</td><td>—</td><td><span class="pill danger no">오류</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <button class="btn primary block mt2">등록 확정 · 공통 코드 안내 발송</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 16. 학생 목록 -->
+        <div class="appscreen" data-app="students">
+          <div class="page-head"><div><h1>학생 목록</h1><div class="sub">156명 · 2026-2 가을학기 배치고사</div></div><div class="spacer"></div><input class="input" style="width:220px" placeholder="🔍 이름·아이디 검색"></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>이름</th><th>아이디</th><th>가입</th><th>응시</th><th>채점</th><th>배정 급수</th><th>상세</th></tr></thead>
+              <tbody>
+                <tr><td><b>김서연</b></td><td class="mono">seoyeon</td><td><span class="pill ok no">가입</span></td><td><span class="pill ok no">완료</span></td><td><span class="pill ok no">완료</span></td><td><span class="grade-badge sm">5급</span></td><td><button class="btn ghost sm">보기</button></td></tr>
+                <tr><td><b>이준호</b></td><td class="mono">junho</td><td><span class="pill ok no">가입</span></td><td><span class="pill student no">응시중</span></td><td><span class="pill system no">—</span></td><td><span class="muted">—</span></td><td><button class="btn ghost sm">보기</button></td></tr>
+                <tr><td><b>박지민</b></td><td class="mono">jimin</td><td><span class="pill ok no">가입</span></td><td><span class="pill ok no">완료</span></td><td><span class="pill warn no">대기</span></td><td><span class="pill admin no">대기</span></td><td><button class="btn ghost sm">보기</button></td></tr>
+                <tr><td><b>최유진</b></td><td class="mono">yujin</td><td><span class="pill danger no">미가입</span></td><td><span class="pill system no">—</span></td><td><span class="pill system no">—</span></td><td><span class="muted">—</span></td><td><button class="btn ghost sm">코드 안내 재발송</button></td></tr>
+                <tr><td><b>정민수</b></td><td class="mono">minsu</td><td><span class="pill ok no">가입</span></td><td><span class="pill ok no">완료</span></td><td><span class="pill ok no">완료</span></td><td><span class="grade-badge sm">6급</span></td><td><button class="btn ghost sm">보기</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 17. 응시 현황 -->
+        <div class="appscreen" data-app="live">
+          <div class="page-head"><div><h1>응시 현황 <span class="pill danger" style="vertical-align:middle">● 실시간</span></h1><div class="sub">2026-2 가을학기 배치고사 · 자동 새로고침</div></div></div>
+          <div class="summary">
+            <div class="stat"><div class="lbl">전체 대상</div><div class="num mono">156</div></div>
+            <div class="stat"><div class="lbl">응시 중</div><div class="num mono" style="color:var(--student)">14</div></div>
+            <div class="stat"><div class="lbl">제출 완료</div><div class="num mono" style="color:var(--ok)">128</div></div>
+            <div class="stat"><div class="lbl">미접속</div><div class="num mono" style="color:var(--muted)">14</div></div>
+          </div>
+          <div class="tbl-wrap mt2">
+            <table>
+              <thead><tr><th>학생</th><th>현재 영역</th><th>진행률</th><th>경과 시간</th><th>상태</th></tr></thead>
+              <tbody>
+                <tr><td><b>이준호</b></td><td>듣기</td><td style="min-width:120px"><div class="progress"><i style="width:45%"></i></div></td><td class="mono">12:30</td><td><span class="pill student">응시중</span></td></tr>
+                <tr><td><b>한지우</b></td><td>말하기</td><td><div class="progress"><i style="width:78%"></i></div></td><td class="mono">24:05</td><td><span class="pill student">응시중</span></td></tr>
+                <tr><td><b>오세훈</b></td><td>어휘·문법</td><td><div class="progress"><i style="width:15%"></i></div></td><td class="mono">03:12</td><td><span class="pill student">응시중</span></td></tr>
+                <tr><td><b>김서연</b></td><td>—</td><td><div class="progress"><i style="width:100%; background:var(--ok)"></i></div></td><td class="mono">31:40</td><td><span class="pill ok">제출완료</span></td></tr>
+                <tr><td><b>최유진</b></td><td>—</td><td><div class="progress"><i style="width:0"></i></div></td><td class="mono">—</td><td><span class="pill system">미접속</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 18. 채점 목록 -->
+        <div class="appscreen" data-app="gradelist">
+          <div class="page-head"><div><h1>채점 목록</h1><div class="sub">말하기·쓰기 인간 채점 · AI 가채점 완료</div></div></div>
+          <div class="summary">
+            <div class="stat"><div class="lbl">채점 대기</div><div class="num mono" style="color:var(--warn)">42</div></div>
+            <div class="stat"><div class="lbl">채점 완료</div><div class="num mono" style="color:var(--ok)">86</div></div>
+            <div class="stat"><div class="lbl">AI–인간 차이 큼</div><div class="num mono" style="color:var(--danger)">5</div></div>
+            <div class="stat"><div class="lbl">내 담당</div><div class="num mono">18</div></div>
+          </div>
+          <div class="tbl-wrap mt2">
+            <table>
+              <thead><tr><th>학생</th><th>영역</th><th>AI 가채점</th><th>담당 강사</th><th>상태</th><th></th></tr></thead>
+              <tbody>
+                <tr><td><b>박지민</b></td><td>말하기</td><td class="mono">7.5 / 10</td><td>김강사</td><td><span class="pill warn">대기</span></td><td><button class="btn primary sm" onclick="goApp('grade')">채점</button></td></tr>
+                <tr><td><b>박지민</b></td><td>쓰기</td><td class="mono">6.0 / 10</td><td>김강사</td><td><span class="pill warn">대기</span></td><td><button class="btn primary sm" onclick="goApp('grade')">채점</button></td></tr>
+                <tr><td><b>정민수</b></td><td>말하기</td><td class="mono">8.5 / 10</td><td>이강사</td><td><span class="pill ok">완료</span></td><td><button class="btn ghost sm" onclick="goApp('grade')">보기</button></td></tr>
+                <tr><td><b>한지우</b></td><td>쓰기</td><td class="mono">4.0 / 10</td><td>김강사</td><td><span class="pill danger">차이 큼</span></td><td><button class="btn primary sm" onclick="goApp('grade')">채점</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 19. 채점 (루브릭 + AI) -->
+        <div class="appscreen" data-app="grade">
+          <div class="page-head"><div><h1>채점 · 루브릭 + AI</h1><div class="sub">말하기·쓰기 인간 채점 · AI 가채점 비교</div></div></div>
+          <div class="tabs">
+            <button class="on" onclick="gradeTab(this,'speak')">🎙 말하기</button>
+            <button onclick="gradeTab(this,'write')">✍ 쓰기</button>
+          </div>
+          <div class="grade-grid">
+            <!-- 좌: 학생 리스트 -->
+            <div>
+              <p class="small muted" style="font-weight:700;margin-bottom:8px">채점 대상</p>
+              <div class="stu-list">
+                <div class="stu-item on"><div class="row-between"><b>박지민</b><span class="flag">▲ 차이 2.0</span></div><div class="small muted">AI 예상 7.5</div></div>
+                <div class="stu-item"><div class="row-between"><b>한지우</b><span class="flag">▲ 차이 3.5</span></div><div class="small muted">AI 예상 4.0</div></div>
+                <div class="stu-item"><div class="row-between"><b>정민수</b><span class="flag ok">✓ 확정</span></div><div class="small muted">AI 예상 8.5</div></div>
+                <div class="stu-item"><div class="row-between"><b>오세훈</b><span class="flag ok">일치</span></div><div class="small muted">AI 예상 6.0</div></div>
+              </div>
+            </div>
+            <!-- 중: 응답 + 루브릭 -->
+            <div>
+              <div class="card" id="grade-speak">
+                <div class="row-between"><b>박지민 · 말하기 응답</b><span class="timer-chip mono">🎙 0:58</span></div>
+                <div class="player mt"><button class="play">▶</button><div class="wave"><i style="height:50%"></i><i style="height:90%"></i><i style="height:40%"></i><i style="height:100%"></i><i style="height:60%"></i><i style="height:30%"></i><i style="height:80%"></i><i style="height:55%"></i><i style="height:70%"></i><i style="height:35%"></i></div></div>
+                <div class="passage" style="margin-top:4px"><b class="small" style="color:var(--system)">STT 자동 전사</b><br>저는 여름을 좋아합니다. 왜냐하면 바다에 갈 수 있고… 친구들하고 같이 수영을 하는 것이 재미있기 때문입니다…</div>
+                <p class="small muted" style="font-weight:700;margin:12px 0 6px">루브릭 (유창성 5 + 구성력 5 = 10점)</p>
+                <div class="rubric-item">
+                  <div class="ri-h"><span>유창성</span><span class="ai-score">AI 4.0 / 5</span></div>
+                  <div class="ai-reason">발화 속도는 적절하나 중간 휴지가 잦고 접속 표현 반복이 관찰됩니다.</div>
+                  <div class="score-input"><span class="small muted">강사 점수</span><input class="input" value="4"><span class="muted">/ 5</span></div>
+                </div>
+                <div class="rubric-item">
+                  <div class="ri-h"><span>구성력</span><span class="ai-score">AI 3.5 / 5</span></div>
+                  <div class="ai-reason">주장–근거 구조는 갖췄으나 마무리가 약합니다.</div>
+                  <div class="score-input"><span class="small muted">강사 점수</span><input class="input" value="4"><span class="muted">/ 5</span></div>
+                </div>
+              </div>
+              <div class="card hidden" id="grade-write">
+                <div class="row-between"><b>박지민 · 쓰기 응답</b></div>
+                <div class="passage" style="margin-top:8px"><b class="small" style="color:var(--system)">OCR 변환 텍스트</b><br>제가 가장 좋아하는 계절은 가을입니다. 날씨가 시원하고 하늘이 높습니다. 단풍이 아름다워서 등산을 자주 갑니다…</div>
+                <p class="small muted" style="font-weight:700;margin:12px 0 6px">루브릭 (구성력 5 + 정확성 5 = 10점)</p>
+                <div class="rubric-item">
+                  <div class="ri-h"><span>구성력</span><span class="ai-score">AI 3.0 / 5</span></div>
+                  <div class="ai-reason">문단 구분이 없고 예시가 부족합니다.</div>
+                  <div class="score-input"><span class="small muted">강사 점수</span><input class="input" value="3"><span class="muted">/ 5</span></div>
+                </div>
+                <div class="rubric-item">
+                  <div class="ri-h"><span>정확성</span><span class="ai-score">AI 3.0 / 5</span></div>
+                  <div class="ai-reason">맞춤법은 양호하나 조사 오류가 2건 있습니다.</div>
+                  <div class="score-input"><span class="small muted">강사 점수</span><input class="input" value="3"><span class="muted">/ 5</span></div>
+                </div>
+              </div>
+            </div>
+            <!-- 우: AI vs 인간 -->
+            <div>
+              <div class="grid-2" style="gap:10px">
+                <div class="vs-box"><div class="vs-lbl">AI 가채점</div><div class="vs-num" style="color:var(--admin)">7.5</div></div>
+                <div class="vs-box"><div class="vs-lbl">교수자 확정</div><div class="vs-num" style="color:var(--ink)">8.0</div></div>
+              </div>
+              <div class="discrepancy okd">차이 0.5 · 허용 범위 내 ✓</div>
+              <button class="btn primary block mt2">점수 확정</button>
+              <div class="perm-note" id="gradePerm">관리자 권한: AI↔인간 전체 비교·검증 열람 가능</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 20. 채점 검증 (관리자 전용) -->
+        <div class="appscreen" data-app="verify">
+          <div class="page-head"><div><h1>채점 검증 <span class="pill admin" style="vertical-align:middle">관리자 전용</span></h1><div class="sub">AI 가채점과 교수자 확정 점수의 차이를 검토합니다</div></div></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>학생</th><th>영역</th><th>AI 종합</th><th>강사 종합</th><th>차이</th><th>상태</th></tr></thead>
+              <tbody>
+                <tr style="background:#fdf1ef"><td><b>한지우</b></td><td>쓰기</td><td class="mono">4.0</td><td class="mono">7.5</td><td class="mono" style="color:var(--danger);font-weight:800">▲ 3.5</td><td><span class="pill danger">검토</span></td></tr>
+                <tr style="background:#fdf1ef"><td><b>박지민</b></td><td>말하기</td><td class="mono">7.5</td><td class="mono">9.5</td><td class="mono" style="color:var(--danger);font-weight:800">▲ 2.0</td><td><span class="pill danger">검토</span></td></tr>
+                <tr><td><b>정민수</b></td><td>말하기</td><td class="mono">8.5</td><td class="mono">8.5</td><td class="mono" style="color:var(--ok)">0.0</td><td><span class="pill ok">일치</span></td></tr>
+                <tr><td><b>오세훈</b></td><td>쓰기</td><td class="mono">6.0</td><td class="mono">6.5</td><td class="mono" style="color:var(--ok)">0.5</td><td><span class="pill ok">일치</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="lock-banner mt2">💡 차이가 1.5점 이상인 건은 <b>검토</b> 대상으로 강조됩니다. 재채점 요청 또는 확정 승인을 진행하세요.</div>
+        </div>
+
+        <!-- 21. 분반 결과 -->
+        <div class="appscreen" data-app="class">
+          <div class="page-head"><div><h1>분반 결과</h1><div class="sub">종합 급수 산정 및 반 배정</div></div><div class="spacer"></div><button class="btn ghost" data-admin-btn>📤 엑셀 내보내기</button><button class="btn primary" data-admin-btn>분반 확정</button></div>
+          <div class="summary">
+            <div class="stat"><div class="lbl">응시</div><div class="num mono">128</div></div>
+            <div class="stat"><div class="lbl">채점 확정</div><div class="num mono" style="color:var(--ok)">86</div></div>
+            <div class="stat"><div class="lbl">대기</div><div class="num mono" style="color:var(--warn)">42</div></div>
+            <div class="stat"><div class="lbl">차이 큼</div><div class="num mono" style="color:var(--danger)">5</div></div>
+          </div>
+          <div class="tbl-wrap mt2">
+            <table>
+              <thead><tr><th>학생</th><th>어휘문법</th><th>듣기</th><th>읽기</th><th>말하기</th><th>쓰기</th><th>종합 급수</th><th>AI차이</th><th>배정 반</th></tr></thead>
+              <tbody>
+                <tr><td><b>김서연</b></td><td class="mono">18</td><td class="mono">16</td><td class="mono">17</td><td class="mono">15</td><td class="mono">14</td><td><span class="grade-badge sm">5급</span></td><td><span class="pill ok no">0.5</span></td><td>5급-A</td></tr>
+                <tr><td><b>정민수</b></td><td class="mono">19</td><td class="mono">18</td><td class="mono">18</td><td class="mono">17</td><td class="mono">16</td><td><span class="grade-badge sm">6급</span></td><td><span class="pill ok no">0.0</span></td><td>6급-A</td></tr>
+                <tr><td><b>박지민</b></td><td class="mono">15</td><td class="mono">14</td><td class="mono">13</td><td class="mono">16</td><td class="mono">12</td><td><span class="grade-badge sm">4급</span></td><td><span class="pill danger no">▲2.0</span></td><td><span class="pill admin no">대기</span></td></tr>
+                <tr><td><b>한지우</b></td><td class="mono">12</td><td class="mono">11</td><td class="mono">13</td><td class="mono">10</td><td class="mono">15</td><td><span class="grade-badge sm" style="background:var(--warn)">3급</span></td><td><span class="pill danger no">▲3.5</span></td><td><span class="pill admin no">대기</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 22. 배점·급수 커트라인 설정 -->
+        <div class="appscreen" data-app="settings">
+          <div class="page-head"><div><h1>배점 · 급수 커트라인 설정</h1><div class="sub">§6 확정 대기 항목 · 목업 기본값이 세팅되어 있습니다</div></div></div>
+          <div class="grid-2">
+            <div class="card">
+              <h3 style="font-size:14px">영역별 배점 <span class="muted small">(합계 100)</span></h3>
+              <div class="tbl-wrap mt" style="box-shadow:none">
+                <table style="min-width:auto">
+                  <thead><tr><th>영역</th><th>배점</th></tr></thead>
+                  <tbody>
+                    <tr><td>어휘·문법</td><td><input class="input" style="width:70px" value="20"></td></tr>
+                    <tr><td>듣기</td><td><input class="input" style="width:70px" value="20"></td></tr>
+                    <tr><td>읽기</td><td><input class="input" style="width:70px" value="20"></td></tr>
+                    <tr><td>말하기</td><td><input class="input" style="width:70px" value="20"></td></tr>
+                    <tr><td>쓰기</td><td><input class="input" style="width:70px" value="20"></td></tr>
+                    <tr style="font-weight:800"><td>합계</td><td class="mono" style="padding-left:14px">100</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="field mt2"><label>종합 산정 규칙</label>
+                <div class="seg-btns"><button class="on" onclick="seg(this)">합산</button><button onclick="seg(this)">가중</button><button onclick="seg(this)">최저영역</button></div>
+              </div>
+            </div>
+            <div class="card">
+              <h3 style="font-size:14px">급수 커트라인 <span class="muted small">(최소 총점)</span></h3>
+              <div class="tbl-wrap mt" style="box-shadow:none">
+                <table style="min-width:auto">
+                  <thead><tr><th>급수</th><th>최소 총점</th></tr></thead>
+                  <tbody>
+                    <tr><td><span class="grade-badge sm">8급</span></td><td><input class="input" style="width:70px" value="90"></td></tr>
+                    <tr><td><span class="grade-badge sm">7급</span></td><td><input class="input" style="width:70px" value="80"></td></tr>
+                    <tr><td><span class="grade-badge sm">6급</span></td><td><input class="input" style="width:70px" value="70"></td></tr>
+                    <tr><td><span class="grade-badge sm">5급</span></td><td><input class="input" style="width:70px" value="60"></td></tr>
+                    <tr><td><span class="grade-badge sm">4급</span></td><td><input class="input" style="width:70px" value="50"></td></tr>
+                    <tr><td><span class="grade-badge sm">3급</span></td><td><input class="input" style="width:70px" value="40"></td></tr>
+                    <tr><td><span class="grade-badge sm">2급</span></td><td><input class="input" style="width:70px" value="25"></td></tr>
+                    <tr><td><span class="grade-badge sm">1급</span></td><td><input class="input" style="width:70px" value="0"></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <button class="btn primary block mt2">저장</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 23. 강사 홈 -->
+        <div class="appscreen" data-app="teacher">
+          <div class="page-head"><div><h1>강사 홈</h1><div class="sub">담당 시험 · 채점 현황</div></div></div>
+          <div class="lock-banner">🔒 <b>잠긴 기능</b> · 시험 생성 · 학생 등록 · 분반 확정은 관리자 권한이 필요합니다.</div>
+          <div class="summary mt2" style="grid-template-columns:1fr 1fr 1fr">
+            <div class="stat"><div class="lbl">담당 시험</div><div class="num mono">2</div></div>
+            <div class="stat"><div class="lbl">채점 대기</div><div class="num mono" style="color:var(--warn)">18</div></div>
+            <div class="stat"><div class="lbl">채점 완료</div><div class="num mono" style="color:var(--ok)">34</div></div>
+          </div>
+          <h3 style="font-size:15px; margin:22px 0 10px">담당 시험</h3>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>시험명</th><th>오픈</th><th>응시/완료</th><th>채점 대기</th><th></th></tr></thead>
+              <tbody>
+                <tr><td><b>2026-2 가을학기 배치고사</b></td><td><span class="pill ok no">● ON</span></td><td class="mono">156 / 128</td><td class="mono" style="color:var(--warn)">12</td><td><button class="btn primary sm" onclick="goApp('grade')">채점하기</button></td></tr>
+                <tr><td><b>2026-2 편입생 배치고사</b></td><td><span class="pill ok no">● ON</span></td><td class="mono">40 / 22</td><td class="mono" style="color:var(--warn)">6</td><td><button class="btn primary sm" onclick="goApp('grade')">채점하기</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- /main -->
+    </div><!-- /app -->
+  </div><!-- /browser -->
+</section>
+
+</div><!-- /stage -->
+
+<!-- 제출 확인 모달 -->
+<div class="modal-overlay" id="submitModal">
+  <div class="modal">
+    <div class="m-ic">📝</div>
+    <h3>정말 제출하시겠습니까?</h3>
+    <p>제출 후에는 답안을 수정할 수 없습니다.<br>말하기·쓰기는 채점 후 결과가 공개됩니다.</p>
+    <div class="m-btns">
+      <button class="btn ghost" onclick="closeModal()">아니요</button>
+      <button class="btn primary" onclick="closeModal()">네, 제출합니다</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- 상단 모드 필터 ---------- */
+const modeTabs = document.getElementById('modeTabs');
+modeTabs.addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  [...modeTabs.children].forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  const m = b.dataset.mode;
+  document.querySelectorAll('.section').forEach(sec=>{
+    sec.classList.toggle('hidden', m!=='all' && sec.dataset.mode!==m);
+  });
+});
+
+/* ---------- 관리자/강사 역할 토글 ---------- */
+const roleSwitch = document.getElementById('roleSwitch');
+roleSwitch.addEventListener('click', e=>{
+  const b = e.target.closest('button[data-role]'); if(!b) return;
+  setRole(b.dataset.role);
+});
+function setRole(role){
+  const seg = roleSwitch.querySelectorAll('button');
+  seg.forEach(x=>x.classList.remove('on','admin','instructor'));
+  const active = roleSwitch.querySelector(`[data-role="${role}"]`);
+  active.classList.add('on', role);
+
+  const isAdmin = role==='admin';
+  const color = isAdmin ? 'var(--admin)' : 'var(--instructor)';
+  // 사이드바 브랜드/배지
+  document.getElementById('sbLogo').style.background = color;
+  document.getElementById('sbBrandSub').textContent = isAdmin ? '관리자 콘솔' : '강사 콘솔 (TEACHER)';
+  const badge = document.getElementById('sbRoleBadge');
+  badge.style.background = color;
+  badge.textContent = isAdmin ? '👤 관리자' : '👤 강사';
+  const topPill = document.getElementById('rolePillTop');
+  topPill.textContent = isAdmin ? '현재: 관리자' : '현재: 강사';
+  topPill.className = 'pill no ' + (isAdmin ? 'admin' : 'ok');
+
+  // 관리자 전용 메뉴 잠금(🔒) / 강사 홈 노출
+  document.querySelectorAll('#appNav a').forEach(a=>{
+    if(a.dataset.app==='teacher'){ a.classList.toggle('hidden', isAdmin); return; }
+    if(a.hasAttribute('data-admin')){
+      a.classList.toggle('locked', !isAdmin);
+      const label = a.textContent.replace(' 🔒','');
+      a.querySelector('.ic').nextSibling; // keep
+      if(!isAdmin){ if(!a.innerHTML.includes('🔒')) a.innerHTML = a.innerHTML.replace('</span>','</span>').replace(/\s*🔒/,'') + ' 🔒'; }
+      else { a.innerHTML = a.innerHTML.replace(/\s*🔒/,''); }
+    }
+  });
+  // 관리자 전용 버튼
+  document.querySelectorAll('[data-admin-btn]').forEach(btn=>{
+    btn.style.display = isAdmin ? '' : 'none';
+  });
+  // 채점 화면 권한 안내
+  const gp = document.getElementById('gradePerm');
+  if(gp){
+    gp.textContent = isAdmin
+      ? '관리자 권한: AI↔인간 전체 비교·검증 열람 가능'
+      : '강사 권한: 담당 채점만 · 점수 입력만 가능 (전체 검증은 관리자)';
+  }
+  // 강사면 기본 랜딩을 강사 홈으로
+  if(!isAdmin) goApp('teacher');
+  else if(document.querySelector('[data-app="teacher"].appscreen.on')) goApp('dash');
+}
+
+/* ---------- 사이드바 앱 화면 전환 ---------- */
+function goApp(app){
+  const target = document.querySelector(`.appscreen[data-app="${app}"]`);
+  // 잠긴 메뉴 접근 차단 (강사)
+  const navItem = document.querySelector(`#appNav a[data-app="${app}"]`);
+  if(navItem && navItem.classList.contains('locked')){
+    alert('🔒 관리자 권한이 필요한 기능입니다.\n상단 우측 토글에서 관리자로 전환하세요.');
+    return;
+  }
+  document.querySelectorAll('.appscreen').forEach(s=>s.classList.remove('on'));
+  if(target) target.classList.add('on');
+  document.querySelectorAll('#appNav a').forEach(a=>a.classList.toggle('on', a.dataset.app===app));
+}
+
+/* 인덱스에서 앱 화면 링크 클릭 시 사이드바도 전환 */
+document.querySelectorAll('.pb-index a[data-app]').forEach(a=>{
+  a.addEventListener('click', ()=>{
+    // 관리자·강사 섹션이 숨겨져 있으면 표시
+    const staff = document.getElementById('sec-staff');
+    if(staff.classList.contains('hidden')){
+      [...modeTabs.children].forEach(x=>x.classList.remove('on'));
+      modeTabs.querySelector('[data-mode="all"]').classList.add('on');
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('hidden'));
+    }
+    setTimeout(()=>goApp(a.dataset.app), 40);
+  });
+});
+
+/* ---------- 학생 화면 소소한 상호작용 ---------- */
+function pickChoice(el){
+  const box = el.closest('.choices');
+  box.querySelectorAll('.choice').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function ptab(btn, id){
+  const tabs = btn.parentElement;
+  [...tabs.children].forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const wrap = tabs.parentElement;
+  // 같은 부모 내 형제 컨텐츠 토글
+  ['lg-login','lg-join','sp-tab','wr-tab'].forEach(x=>{
+    const node = wrap.querySelector('#'+x);
+    if(node) node.classList.add('hidden');
+  });
+  const show = wrap.querySelector('#'+id);
+  if(show) show.classList.remove('hidden');
+}
+function gradeTab(btn,which){
+  [...btn.parentElement.children].forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('grade-speak').classList.toggle('hidden', which!=='speak');
+  document.getElementById('grade-write').classList.toggle('hidden', which!=='write');
+}
+function seg(btn){
+  [...btn.parentElement.children].forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+function openModal(){document.getElementById('submitModal').classList.add('on')}
+function closeModal(){document.getElementById('submitModal').classList.remove('on')}
+
+/* ---------- 레이더 차트 (SVG 펜타곤 5축) ---------- */
+(function radar(){
+  const size=220, cx=size/2, cy=size/2, R=82;
+  const axes=['어휘문법','읽기','듣기','말하기','쓰기'];
+  const me=[0.88,0.82,0.80,0.72,0.68];
+  const avg=[0.62,0.60,0.66,0.58,0.55];
+  const pt=(i,r)=>{
+    const ang=-Math.PI/2 + i*2*Math.PI/5;
+    return [cx+Math.cos(ang)*R*r, cy+Math.sin(ang)*R*r];
+  };
+  const poly=vals=>vals.map((v,i)=>pt(i,v).join(',')).join(' ');
+  let grid='';
+  [0.25,0.5,0.75,1].forEach(r=>{
+    grid+=`<polygon points="${poly([r,r,r,r,r])}" fill="none" stroke="#dde3ea" stroke-width="1"/>`;
+  });
+  let spokes='',labels='';
+  for(let i=0;i<5;i++){
+    const [x,y]=pt(i,1); spokes+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#dde3ea" stroke-width="1"/>`;
+    const [lx,ly]=pt(i,1.22);
+    labels+=`<text x="${lx}" y="${ly}" font-size="10.5" fill="#697586" font-weight="700" text-anchor="middle" dominant-baseline="middle">${axes[i]}</text>`;
+  }
+  const svg=`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="overflow:visible">
+    ${grid}${spokes}
+    <polygon points="${poly(avg)}" fill="none" stroke="#697586" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <polygon points="${poly(me)}" fill="rgba(106,75,208,.22)" stroke="#6a4bd0" stroke-width="2"/>
+    ${me.map((v,i)=>{const[x,y]=pt(i,v);return `<circle cx="${x}" cy="${y}" r="3" fill="#6a4bd0"/>`}).join('')}
+    ${labels}
+  </svg>`;
+  document.getElementById('radar-holder').innerHTML=svg;
+})();
+
+/* 초기 역할 = 관리자 */
+setRole('admin');
+</script>
+</body>
+</html>
