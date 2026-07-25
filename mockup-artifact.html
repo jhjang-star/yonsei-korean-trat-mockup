@@ -928,23 +928,29 @@ function sbClass(){
     const cells=AREAS.map(a=>{const v=areaScore20(s,a);return `<td class="mono">${v==null?'<span class="muted">대기</span>':v}</td>`}).join('');
     return `<tr><td><b>${s.name}</b></td>${cells}<td class="mono" style="font-weight:800">${s.vocabRaw60==null?'—':s.vocabRaw60+'/60'}</td><td class="mono">${t==null?'—':t}</td>
       <td>${full?gradeChipStu(s,true):'<span class="pill warn no">대기</span>'}</td>
-      <td>${!full?'<span class="pill warn no">채점 대기</span>':(s.classConfirmed?('<b>'+s.assignedClass+'</b>'):'<span class="pill admin no">미확정</span>')}</td></tr>`;
+      <td>${!full?'<span class="pill warn no">채점 대기</span>':(s.classConfirmed?('<b>'+s.assignedClass+'</b>'):`<button class="btn primary sm" onclick="confirmOne('${s.id}')">${placement(s).label}반 확정 →</button>`)}</td></tr>`;
   }).join('');
   const pend=ready.filter(s=>!s.classConfirmed).length;
   return `<div class="page-head"><div><h1>분반 결과</h1><div class="sub">종합 급수 자동 산정 · 반 배정</div></div><div class="spacer"></div>
     <button class="btn ghost" onclick="exportCSV()">📤 엑셀 내보내기</button>
     <button class="btn primary" onclick="confirmClass()" ${pend?'':'disabled'}>분반 확정 (${pend})</button></div>
-  <div class="summary"><div class="stat"><div class="lbl">응시</div><div class="num mono">${DB.students.filter(s=>s.progress==='submitted').length}</div></div>
+  ${pend?`<div class="info-banner" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>📋 채점 확정된 <b>${pend}명</b>이 분반 대기 중입니다. 아래 표에서 학생별로 <b>확정</b>하거나, 오른쪽 버튼으로 <b>한 번에 확정</b>하세요.</span><button class="btn primary sm" onclick="confirmClass()">전체 ${pend}명 분반 확정</button></div>`:'<div class="info-banner" style="background:var(--instructor-bg);border-color:#bfe6dc;color:var(--ok)">✓ 채점 확정된 학생이 모두 분반되었습니다.</div>'}
+  <div class="summary mt2"><div class="stat"><div class="lbl">응시</div><div class="num mono">${DB.students.filter(s=>s.progress==='submitted').length}</div></div>
   <div class="stat"><div class="lbl">채점 확정</div><div class="num mono" style="color:var(--ok)">${ready.length}</div></div>
   <div class="stat"><div class="lbl">분반 대기</div><div class="num mono" style="color:var(--warn)">${pend}</div></div>
   <div class="stat"><div class="lbl">차이 큼</div><div class="num mono" style="color:var(--danger)">${DB.students.filter(bigDiff).length}</div></div></div>
   <div class="tbl-wrap mt2"><table><thead><tr><th>학생</th><th>어휘문법</th><th>듣기</th><th>읽기</th><th>말하기</th><th>쓰기</th><th>어휘원점수</th><th>참고총점</th><th>급수(배치)</th><th>배정 반</th></tr></thead><tbody>${rows||'<tr><td colspan="10" class="muted center" style="padding:24px">제출 학생이 없습니다.</td></tr>'}</tbody></table></div>
+  <div class="row-between mt2">
+    <span class="small muted">채점 확정 ${ready.length}명 · 분반 대기 <b style="color:var(--warn)">${pend}명</b></span>
+    <button class="btn primary" onclick="confirmClass()" ${pend?'':'disabled'}>미배정 전체 분반 확정 (${pend})</button>
+  </div>
   <div class="perm-note">급수는 <b>어휘·문법 원점수(0~60)</b>로 배치됩니다(설정 → 정밀 매핑 표). 참고총점은 5영역 합산 지표입니다. 12~17점대는 반말 앎/모름에 따라 세부 단계가 갈립니다(채점 화면에서 조정).</div>`;
 }
+function confirmOne(id){ const s=getStudent(id); if(s&&isFullyGraded(s)){ assignClass(s); s.classConfirmed=true; toast('✓ '+s.name+' → '+s.assignedClass+' 배정 완료'); } renderStaff(); }
 function confirmClass(){
   let n=0;
   DB.students.forEach(s=>{ if(s.progress==='submitted'&&isFullyGraded(s)&&!s.classConfirmed){ assignClass(s); s.classConfirmed=true; n++; } });
-  toast('✓ '+n+'명 분반 확정 완료'); renderStaff();
+  toast(n?('✓ '+n+'명 분반 확정 완료'):'분반 확정할 학생이 없습니다'); renderStaff();
 }
 function exportCSV(){ toast('📤 데모: 분반 결과 CSV 내보내기'); }
 function sbSettings(){
