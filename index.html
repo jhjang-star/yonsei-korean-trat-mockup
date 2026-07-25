@@ -347,9 +347,30 @@ function gradeFromTotal(total){
   for(let g=8;g>=1;g--){ if(total>=cl[g]) return g; }
   return 1;
 }
+/* 급수 내 세부 단계 (연세대 8단계 배정 참고): 1~5급=하/상, 6~8급=하/중/상 */
+const SUBLEVELS={1:['하','상'],2:['하','상'],3:['하','상'],4:['하','상'],5:['하','상'],6:['하','중','상'],7:['하','중','상'],8:['하','중','상']};
+function subOf(total){
+  const g=gradeFromTotal(total); if(g==null) return null;
+  const cl=DB.settings.cutlines;
+  const lo=cl[g], hi=(g<8?cl[g+1]:101);
+  const span=Math.max(1,hi-lo);
+  let pos=(total-lo)/span; pos=Math.max(0,Math.min(0.999,pos));
+  const arr=SUBLEVELS[g]; return arr[Math.floor(pos*arr.length)];
+}
+function gradeLabel(total){ const g=gradeFromTotal(total); return g==null?null:g+'급 '+subOf(total); }
+function gradeChip(total,small){
+  const g=gradeFromTotal(total); if(g==null) return '<span class="pill warn no">대기</span>';
+  return `<span style="display:inline-flex;align-items:center;gap:5px"><span class="grade-badge ${small?'sm':''}">${g}급</span><b class="small" style="color:var(--admin)">${subOf(total)}</b></span>`;
+}
+function areaGradeLabel(stu,area){
+  const sc=areaScore20(stu,area); if(sc==null) return null;
+  const pct=Math.round(sc/DB.settings.weights[area]*100);
+  return gradeLabel(pct);
+}
 function assignClass(stu){
-  const g=gradeFromTotal(totalScore(stu));
-  stu.assignedClass = g? (g+'급-A') : null;
+  const t=totalScore(stu); const g=gradeFromTotal(t);
+  stu.assignedGrade=g; stu.assignedSub=g?subOf(t):null;
+  stu.assignedClass = g? (g+'급 '+subOf(t)+'반') : null;
 }
 function areaScore20(stu,area){
   if(area==='speaking'||area==='writing') return humanArea20(stu,area);
@@ -507,16 +528,16 @@ function stuResult(me){
     const pct=sc!=null?Math.round(sc/DB.settings.weights[area]*100):null;
     return `<div class="pcard" style="padding:11px 13px;display:flex;align-items:center;gap:10px">
       <b style="flex:1">${AREA_KO[area]}</b>
-      ${pending?'<span class="pill warn no">채점 대기</span>':`<span class="mono muted small">${sc}/${DB.settings.weights[area]}점 · ${pct}%</span>`}</div>`;
+      ${pending?'<span class="pill warn no">채점 대기</span>':`<span class="mono muted small">${sc}/${DB.settings.weights[area]}점 · ${pct}%</span> <span class="pill admin no" style="font-size:10.5px">${areaGradeLabel(me,area)}</span>`}</div>`;
   };
   let head;
   if(graded){
-    const t=totalScore(me), g=gradeFromTotal(t);
+    const t=totalScore(me);
     head=`<div class="ai-card"><div class="ai-h">✦ 최종 결과</div>
-      <div class="row-between"><span class="small muted">종합 급수</span><span class="grade-badge">${g}급</span></div>
+      <div class="row-between"><span class="small muted">종합 급수</span>${gradeChip(t,false)}</div>
       <div class="row-between mt"><span class="small muted">총점</span><span class="mono" style="font-size:20px;font-weight:900">${t} / 100</span></div>
       <div class="row-between mt"><span class="small muted">배정 반</span><span>${me.classConfirmed&&me.assignedClass?('<b>'+me.assignedClass+'</b>'):'<span class="pill admin no">배정 대기</span>'}</span></div>
-      <p class="small mt2" style="line-height:1.7">${aiFeedback(me,g)}</p></div>
+      <p class="small mt2" style="line-height:1.7">${aiFeedback(me)}</p></div>
       <div id="radarBox" class="mt2 center"></div>
       <div class="radar-legend"><span><i style="background:var(--admin)"></i> 내 성취도</span><span><i style="border-top:2px dashed var(--muted);height:0"></i> 응시자 평균</span></div>`;
   } else {
@@ -529,9 +550,10 @@ function stuResult(me){
   <div class="mt" style="display:flex;flex-direction:column;gap:7px">${AREAS.map(areaRow).join('')}</div>
   <button class="btn ghost block mt2" onclick="go('home')">← 홈으로</button>`;
 }
-function aiFeedback(me,g){
+function aiFeedback(me){
+  const t=totalScore(me); const lbl=gradeLabel(t);
   const weak=AREAS.map(a=>({a,s:areaScore20(me,a)||0})).sort((x,y)=>x.s-y.s)[0];
-  return `현재 <b>${g}급</b> 수준입니다. 정규 <b style="color:var(--student)">${g}급반</b> 수업을 권장합니다. 상대적으로 <b style="color:var(--danger)">${AREA_KO[weak.a]}</b> 영역 보완이 필요해 보입니다.`;
+  return `현재 <b>${lbl}</b> 수준입니다. 정규 <b style="color:var(--student)">${lbl}반</b> 수업을 권장합니다. 상대적으로 <b style="color:var(--danger)">${AREA_KO[weak.a]}</b> 영역 보완이 필요해 보입니다.`;
 }
 
 /* =========================================================
@@ -688,6 +710,7 @@ function sbCreate(){
       <label class="pcard" style="padding:10px 12px"><input type="checkbox" checked> 듣기 · 읽기 · 말하기 · 쓰기</label>
     </div></div>
     <div class="perm-note">어휘·문법 점수로 수준 자동 판정 → 이후 영역 난이도 결정(학생 비노출)</div>
+    <div class="perm-note">📚 실제 문제은행(과목당): 어휘·어법 <b>60</b> · 듣기 <b>36</b> · 읽기 <b>36</b> · 쓰기 <b>6</b> · 말하기 <b>6</b> (총 36세트 보관, 매 응시 랜덤 출제)</div>
     <button class="btn primary block mt2" onclick="toast('데모: 시험은 이미 생성되어 있습니다')">시험 생성</button>
   </div></div>`;
 }
@@ -717,7 +740,7 @@ function sbStudents(){
       <td>${s.joined?'<span class="pill ok no">가입</span>':'<span class="pill danger no">미가입</span>'}</td>
       <td>${progressPill(s)}</td>
       <td>${s.progress==='submitted'?(isFullyGraded(s)?'<span class="pill ok no">완료</span>':'<span class="pill warn no">대기</span>'):'<span class="pill system no">—</span>'}</td>
-      <td>${g?`<span class="grade-badge sm">${g}급</span>`:(s.classConfirmed&&s.assignedClass?s.assignedClass:'<span class="muted">—</span>')}</td></tr>`;
+      <td>${g?gradeChip(totalScore(s),true):'<span class="muted">—</span>'}</td></tr>`;
   }).join('');
   return `<div class="page-head"><div><h1>학생 목록</h1><div class="sub">${DB.students.length}명</div></div></div>
   <div class="tbl-wrap"><table><thead><tr><th>이름</th><th>아이디</th><th>가입</th><th>응시</th><th>채점</th><th>배정 급수</th></tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -845,7 +868,7 @@ function sbClass(){
     const t=full?totalScore(s):null, g=full?gradeFromTotal(t):null;
     const cells=AREAS.map(a=>{const v=areaScore20(s,a);return `<td class="mono">${v==null?'<span class="muted">대기</span>':v}</td>`}).join('');
     return `<tr><td><b>${s.name}</b></td>${cells}<td class="mono" style="font-weight:800">${t==null?'—':t}</td>
-      <td>${g?`<span class="grade-badge sm">${g}급</span>`:'<span class="pill warn no">대기</span>'}</td>
+      <td>${full?gradeChip(t,true):'<span class="pill warn no">대기</span>'}</td>
       <td>${!full?'<span class="pill warn no">채점 대기</span>':(s.classConfirmed?('<b>'+s.assignedClass+'</b>'):'<span class="pill admin no">미확정</span>')}</td></tr>`;
   }).join('');
   const pend=ready.filter(s=>!s.classConfirmed).length;
@@ -882,7 +905,14 @@ function sbSettings(){
     ${[8,7,6,5,4,3,2,1].map(g=>`<tr><td><span class="grade-badge sm">${g}급</span></td><td><input class="input" style="width:70px" type="number" value="${cl[g]}" onchange="setCut(${g},this.value)"></td></tr>`).join('')}
     </tbody></table></div>
     <button class="btn primary block mt2" onclick="toast('✓ 설정 저장됨 · 분반 계산에 반영')">저장</button>
-  </div></div>`;
+  </div></div>
+  <div class="card mt2"><h3 style="font-size:14px">급수 내 세부 단계 (상/중/하) <span class="muted small">· 연세대 8단계 배정 참고</span></h3>
+    <p class="small muted mt">각 급수는 커트라인 구간을 세분해 세부 단계로 배정됩니다. 목업은 아래 구조를 따릅니다.</p>
+    <div class="mt" style="display:flex;flex-wrap:wrap;gap:8px">
+      ${[1,2,3,4,5,6,7,8].map(g=>`<span class="pill ${g>=6?'admin':'system'} no" style="font-size:11.5px"><b>${g}급</b> ${SUBLEVELS[g].join('·')}</span>`).join('')}
+    </div>
+    <div class="perm-note">· 1~5급: <b>하 / 상</b> 2단계 · 6~8급: <b>하 / 중 / 상</b> 3단계<br>· 세부 단계엔 능력 기술(예: 3상=비격식체 반말 모름, 4하=비격식체 반말 앎, 4상=격식체 반말 모름 …)이 대응됩니다. <span class="muted">(실제 배정 기준은 교육 담당 확정)</span></div>
+  </div>`;
 }
 function setWeight(a,v){ DB.settings.weights[a]=parseInt(v)||0; DB.students.forEach(s=>{if(s.auto)computeAuto(s);}); renderStaff(); }
 function setCut(g,v){ DB.settings.cutlines[g]=parseInt(v)||0; renderStaff(); }
