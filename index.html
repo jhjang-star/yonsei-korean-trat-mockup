@@ -441,8 +441,8 @@ tbody tr:hover{background:#fafbfc}
             <div class="field"><label>이름</label><input class="input" placeholder="홍길동"></div>
             <div class="field"><label>아이디</label><input class="input" placeholder="아이디"></div>
             <div class="field"><label>비밀번호</label><input class="input" type="password" placeholder="비밀번호"></div>
-            <div class="field"><label>학교 인증코드</label><input class="input" placeholder="예: YSKLI-2026-A1"><span class="hint">🏫 학교(관리자)가 <b>문자·이메일로 보내준</b> 코드를 입력하세요. 직접 만드는 코드가 아닙니다.</span></div>
-            <p class="small muted" style="margin:-4px 0 12px">코드를 못 받으셨나요? 학교 담당자에게 문의하거나 관리자에게 <b>재발송</b>을 요청하세요.</p>
+            <div class="field"><label>학교 공통 인증코드</label><input class="input" placeholder="예: YSKLI-2026-A1"><span class="hint">🏫 학교(관리자)가 <b>문자·이메일·안내문으로 공지한 공통 코드</b>를 입력하세요. 우리 시험 응시생은 모두 같은 코드를 씁니다.</span></div>
+            <p class="small muted" style="margin:-4px 0 12px">코드를 못 받으셨나요? 학교 담당자에게 문의하거나 관리자에게 <b>안내 재발송</b>을 요청하세요.</p>
             <button class="btn primary lg mt">가입하고 배치고사 시작</button>
           </div>
         </div>
@@ -852,12 +852,30 @@ tbody tr:hover{background:#fafbfc}
 
         <!-- 15. 학생 등록 -->
         <div class="appscreen" data-app="enroll">
-          <div class="page-head"><div><h1>학생 등록</h1><div class="sub">엑셀로 학생을 일괄 등록하고 인증코드를 발송합니다</div></div></div>
+          <div class="page-head"><div><h1>학생 등록</h1><div class="sub">엑셀로 학생을 일괄 등록하고, 학교 공통 인증코드를 안내합니다</div></div></div>
+
+          <!-- 학교 공통 인증코드 카드 -->
+          <div class="card" style="border-color:#cfe1f5; background:var(--student-bg); margin-bottom:16px">
+            <div class="row-between">
+              <div>
+                <div class="small" style="font-weight:800; color:var(--student)">🏫 학교 공통 인증코드 · 2026-2 가을학기 배치고사</div>
+                <div class="small muted mt" style="margin-top:6px">이 시험의 <b>모든 학생이 같은 코드</b>로 가입합니다. 코드는 학생이 만드는 게 아니라 <b>시스템이 시험별로 자동 생성</b>합니다.</div>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px">
+                <span class="mono" style="font-size:24px; font-weight:900; letter-spacing:1px; color:var(--student)">YSKLI-2026-A1</span>
+                <div style="display:flex; flex-direction:column; gap:6px">
+                  <button class="btn ghost sm">📋 복사</button>
+                  <button class="btn ghost sm">🔄 코드 재발급</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="grid-2">
             <div class="card">
               <div class="dropzone"><div class="big">⇪</div><b>엑셀 파일을 여기에 드롭</b><div class="small mt">또는 클릭하여 업로드 · .xlsx</div></div>
               <button class="btn ghost block mt">📥 등록 템플릿 다운로드</button>
-              <div class="perm-note mt">🏫 인증코드는 학생이 만드는 게 아니라 <b>시스템이 학생별로 자동 생성</b>합니다. <b>등록 확정</b> 시 각 학생에게 <b>문자·이메일로 발송</b>되고, 학생은 가입할 때 이 코드를 입력합니다.</div>
+              <div class="perm-note mt">💡 엑셀에는 <b>이름·아이디·초기PW</b>만 넣으면 됩니다. 인증코드 열은 필요 없습니다. <b>등록 확정</b> 시 위 <b>공통 코드가 문자·이메일·안내문으로 일괄 발송</b>되고, 학생은 가입할 때 이 코드를 입력합니다.</div>
               <div class="summary mt2" style="grid-template-columns:1fr 1fr 1fr; gap:10px">
                 <div class="stat" style="padding:12px"><div class="lbl">성공</div><div class="num mono" style="font-size:22px; color:var(--ok)">154</div></div>
                 <div class="stat" style="padding:12px"><div class="lbl">중복</div><div class="num mono" style="font-size:22px; color:var(--warn)">2</div></div>
@@ -868,16 +886,16 @@ tbody tr:hover{background:#fafbfc}
               <h3 style="font-size:14px; margin-bottom:10px">미리보기</h3>
               <div class="tbl-wrap" style="box-shadow:none">
                 <table style="min-width:auto; font-size:12px">
-                  <thead><tr><th>이름</th><th>아이디</th><th>초기PW</th><th>반</th><th>인증코드</th><th>상태</th></tr></thead>
+                  <thead><tr><th>이름</th><th>아이디</th><th>초기PW</th><th>반</th><th>상태</th></tr></thead>
                   <tbody>
-                    <tr><td>김서연</td><td>seoyeon</td><td class="mono">a8f2</td><td>미배정</td><td class="mono">YSKLI-A1</td><td><span class="pill ok no">정상</span></td></tr>
-                    <tr><td>이준호</td><td>junho</td><td class="mono">k3d9</td><td>미배정</td><td class="mono">YSKLI-A2</td><td><span class="pill ok no">정상</span></td></tr>
-                    <tr><td>박지민</td><td>jimin</td><td class="mono">z1p7</td><td>미배정</td><td class="mono">YSKLI-A3</td><td><span class="pill warn no">중복</span></td></tr>
-                    <tr><td>—</td><td>(빈값)</td><td>—</td><td>—</td><td>—</td><td><span class="pill danger no">오류</span></td></tr>
+                    <tr><td>김서연</td><td>seoyeon</td><td class="mono">a8f2</td><td>미배정</td><td><span class="pill ok no">정상</span></td></tr>
+                    <tr><td>이준호</td><td>junho</td><td class="mono">k3d9</td><td>미배정</td><td><span class="pill ok no">정상</span></td></tr>
+                    <tr><td>박지민</td><td>jimin</td><td class="mono">z1p7</td><td>미배정</td><td><span class="pill warn no">중복</span></td></tr>
+                    <tr><td>—</td><td>(빈값)</td><td>—</td><td>—</td><td><span class="pill danger no">오류</span></td></tr>
                   </tbody>
                 </table>
               </div>
-              <button class="btn primary block mt2">등록 확정 · 인증코드 발송</button>
+              <button class="btn primary block mt2">등록 확정 · 공통 코드 안내 발송</button>
             </div>
           </div>
         </div>
@@ -892,7 +910,7 @@ tbody tr:hover{background:#fafbfc}
                 <tr><td><b>김서연</b></td><td class="mono">seoyeon</td><td><span class="pill ok no">가입</span></td><td><span class="pill ok no">완료</span></td><td><span class="pill ok no">완료</span></td><td><span class="grade-badge sm">5급</span></td><td><button class="btn ghost sm">보기</button></td></tr>
                 <tr><td><b>이준호</b></td><td class="mono">junho</td><td><span class="pill ok no">가입</span></td><td><span class="pill student no">응시중</span></td><td><span class="pill system no">—</span></td><td><span class="muted">—</span></td><td><button class="btn ghost sm">보기</button></td></tr>
                 <tr><td><b>박지민</b></td><td class="mono">jimin</td><td><span class="pill ok no">가입</span></td><td><span class="pill ok no">완료</span></td><td><span class="pill warn no">대기</span></td><td><span class="pill admin no">대기</span></td><td><button class="btn ghost sm">보기</button></td></tr>
-                <tr><td><b>최유진</b></td><td class="mono">yujin</td><td><span class="pill danger no">미가입</span></td><td><span class="pill system no">—</span></td><td><span class="pill system no">—</span></td><td><span class="muted">—</span></td><td><button class="btn ghost sm">코드 재발송</button></td></tr>
+                <tr><td><b>최유진</b></td><td class="mono">yujin</td><td><span class="pill danger no">미가입</span></td><td><span class="pill system no">—</span></td><td><span class="pill system no">—</span></td><td><span class="muted">—</span></td><td><button class="btn ghost sm">코드 안내 재발송</button></td></tr>
                 <tr><td><b>정민수</b></td><td class="mono">minsu</td><td><span class="pill ok no">가입</span></td><td><span class="pill ok no">완료</span></td><td><span class="pill ok no">완료</span></td><td><span class="grade-badge sm">6급</span></td><td><button class="btn ghost sm">보기</button></td></tr>
               </tbody>
             </table>
