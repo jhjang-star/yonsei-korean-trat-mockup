@@ -441,7 +441,8 @@ tbody tr:hover{background:#fafbfc}
             <div class="field"><label>이름</label><input class="input" placeholder="홍길동"></div>
             <div class="field"><label>아이디</label><input class="input" placeholder="아이디"></div>
             <div class="field"><label>비밀번호</label><input class="input" type="password" placeholder="비밀번호"></div>
-            <div class="field"><label>학교 인증코드</label><input class="input" placeholder="예: YSKLI-2026-A1"><span class="hint">관리자가 발송한 인증코드를 입력하세요</span></div>
+            <div class="field"><label>학교 인증코드</label><input class="input" placeholder="예: YSKLI-2026-A1"><span class="hint">🏫 학교(관리자)가 <b>문자·이메일로 보내준</b> 코드를 입력하세요. 직접 만드는 코드가 아닙니다.</span></div>
+            <p class="small muted" style="margin:-4px 0 12px">코드를 못 받으셨나요? 학교 담당자에게 문의하거나 관리자에게 <b>재발송</b>을 요청하세요.</p>
             <button class="btn primary lg mt">가입하고 배치고사 시작</button>
           </div>
         </div>
@@ -856,6 +857,7 @@ tbody tr:hover{background:#fafbfc}
             <div class="card">
               <div class="dropzone"><div class="big">⇪</div><b>엑셀 파일을 여기에 드롭</b><div class="small mt">또는 클릭하여 업로드 · .xlsx</div></div>
               <button class="btn ghost block mt">📥 등록 템플릿 다운로드</button>
+              <div class="perm-note mt">🏫 인증코드는 학생이 만드는 게 아니라 <b>시스템이 학생별로 자동 생성</b>합니다. <b>등록 확정</b> 시 각 학생에게 <b>문자·이메일로 발송</b>되고, 학생은 가입할 때 이 코드를 입력합니다.</div>
               <div class="summary mt2" style="grid-template-columns:1fr 1fr 1fr; gap:10px">
                 <div class="stat" style="padding:12px"><div class="lbl">성공</div><div class="num mono" style="font-size:22px; color:var(--ok)">154</div></div>
                 <div class="stat" style="padding:12px"><div class="lbl">중복</div><div class="num mono" style="font-size:22px; color:var(--warn)">2</div></div>
