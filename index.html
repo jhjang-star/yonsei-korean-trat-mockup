@@ -160,6 +160,14 @@ tbody tr:last-child td{border-bottom:0}
 .radar-legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
 .lock-banner{background:#fff8ee;border:1px solid #f0dcbb;border-radius:11px;padding:12px 14px;font-size:12.5px;color:#8a6414;display:flex;gap:9px;align-items:flex-start}
 .info-banner{background:var(--student-bg);border:1px solid #cfe1f5;border-radius:11px;padding:12px 14px;font-size:12.5px;color:var(--student)}
+.dropzone{border:2px dashed var(--border);border-radius:12px;padding:26px 16px;text-align:center;color:var(--muted);background:#fbfcfd;cursor:pointer}
+.dropzone .big{font-size:30px;margin-bottom:6px}
+.dropzone:hover{border-color:var(--student);color:var(--student)}
+.ocr-preview{border:1px dashed var(--student);border-radius:11px;padding:12px;font-size:13px;line-height:1.9;background:#fbfdff}
+.ocr-preview .bad{background:#fbe9e7;color:var(--danger);border-radius:4px;padding:0 3px;font-weight:700;text-decoration:underline dotted;cursor:pointer}
+.photo-thumb{width:56px;height:72px;border-radius:8px;background:linear-gradient(135deg,#dbe6f2,#c3d4e8);display:grid;place-items:center;font-size:24px;flex:none}
+.chk-inline{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;padding:10px 0;cursor:pointer}
+.chk-inline input{width:17px;height:17px;accent-color:var(--student)}
 .perm-note{font-size:12px;color:var(--muted);background:var(--border-2);border-radius:9px;padding:9px 12px;margin-top:10px}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .row-between{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
@@ -246,6 +254,9 @@ const QUESTIONS = {
 };
 const SPEAK_PROMPT = '내가 좋아하는 계절과 그 이유를 1분간 말해 보세요.';
 const WRITE_PROMPT = '주말에 한 일에 대해 200자 내외로 써 보세요.';
+/* 쓰기 사진 → OCR 시뮬레이션 (오인식 후보는 빨간색) */
+const OCR_TEXT = '지난 주말에 친구들과 공원에 갔습니다. 날씨가 따뜻하고 사람이 많았습니다. 우리는 자전거를 타고 사진도 찍었습니다.';
+const OCR_HL = '지난 주말에 친구들과 공원에 갔습니다. 날씨가 <span class="bad" title="오인식 가능">따뜻</span>하고 사람이 많았습니다. 우리는 <span class="bad" title="오인식 가능">자전거</span>를 타고 사진도 찍었습니다.';
 
 /* =========================================================
    2) 상태 (인메모리 · 세 역할 공유)
@@ -319,11 +330,12 @@ function computeAuto(stu){
   stu.level = vp>=0.8?'고급 (상)': vp>=0.5?'중급 (중)':'초급 (하)';
 }
 function aiItem(len, base){ return Math.max(1, Math.min(5, base + Math.floor(len/45))); }
+function aiFromSec(s){ return Math.max(1, Math.min(5, 2 + Math.floor(Math.max(0,s)/18))); } // 녹음 길이 기반
 function computeAI(stu){
-  const sLen=(stu.responses.speaking.stt||'').length;
+  const sSec=(stu.responses.speaking.sec||0);
   const wLen=(stu.responses.writing.text||'').length;
   stu.ai={
-    speaking:{f:aiItem(sLen,2), o:aiItem(sLen,2)},
+    speaking:{f:aiFromSec(sSec), o:aiFromSec(sSec-8)},
     writing:{o:aiItem(wLen,2), a:aiItem(wLen,2)},
   };
 }
@@ -519,29 +531,46 @@ function stuExam(area){
 }
 function stuSpeaking(){
   const r=session.draft.speaking;
+  const hasRec = r.sec>0 && !session.recording;
   return `<div class="row-between"><span class="qtag">말하기</span><span class="timer-chip mono">⏱ ${examTimer()}</span></div>
   <div class="steps">${stepLabel('speaking')}</div>
   <div class="qtext" style="font-size:14px">${SPEAK_PROMPT}</div>
   <div class="pcard center">
     <button class="rec-btn ${session.recording?'':'idle'}" onclick="toggleRec()">${session.recording?'■':'●'}</button>
     <div style="font-size:22px;font-weight:900;margin-top:12px" class="mono" id="recTime">${fmt(session.recording?session.recSec:r.sec)}</div>
-    <p class="small muted mt">${session.recording?'녹음 중… 눌러서 정지':(r.sec>0?'녹음 완료 ('+fmt(r.sec)+') · 다시 하려면 ●':'● 를 눌러 녹음을 시작하세요')}</p>
+    <p class="small muted mt">${session.recording?'녹음 중… 눌러서 정지':(hasRec?'녹음 완료 ('+fmt(r.sec)+') · 다시 하려면 ●':'● 를 눌러 녹음을 시작하세요')}</p>
+    ${hasRec?`<div class="wave mt" style="height:26px">${[50,80,40,100,60,30,75,45,90,55,35,70].map(h=>'<i style="height:'+h+'%"></i>').join('')}</div>`:''}
   </div>
-  <div class="field mt2"><label>자동 전사(STT) 결과 · 수정 가능</label>
-    <textarea class="input" id="sp_stt" placeholder="녹음하면 음성이 자동 전사됩니다. (시뮬레이션: 말한 내용을 입력하세요)">${r.stt}</textarea>
-    <span class="hint">채점은 이 전사 텍스트를 기준으로 진행됩니다.</span></div>
-  <button class="btn primary lg mt" onclick="saveSpeaking()">쓰기로 →</button>`;
+  <div class="info-banner mt2">🎙️ 녹음 파일만 저장됩니다. 채점은 교수자가 녹음을 <b>직접 듣고</b> 진행합니다.</div>
+  <button class="btn primary lg mt2" onclick="saveSpeaking()" ${hasRec?'':'disabled'}>녹음 저장하고 다음 →</button>`;
 }
 function stuWriting(){
   const r=session.draft.writing;
-  return `<div class="row-between"><span class="qtag">쓰기</span><span class="timer-chip mono">⏱ ${examTimer()}</span></div>
+  const head=`<div class="row-between"><span class="qtag">쓰기</span><span class="timer-chip mono">⏱ ${examTimer()}</span></div>
   <div class="steps">${stepLabel('writing')}</div>
-  <div class="qtext" style="font-size:14px">${WRITE_PROMPT}</div>
-  <div class="lock-banner" style="background:var(--student-bg);border-color:#cfe1f5;color:var(--student)">📷 실제 서비스는 사진→OCR 인식. 여기서는 직접 입력하면 OCR 결과로 처리됩니다.</div>
-  <div class="field mt"><textarea class="input" id="wr_text" style="min-height:150px" placeholder="여기에 작성하세요 (200자 내외)">${r.text}</textarea>
-    <span class="hint"><span id="wr_count">${r.text.length}</span>자</span></div>
-  <button class="btn primary lg mt" onclick="submitExam()">제출하기</button>`;
+  <div class="qtext" style="font-size:14px">${WRITE_PROMPT}</div>`;
+  if(!r.photo){
+    return head + `
+    <div class="dropzone" onclick="uploadPhoto()"><div class="big">📷</div><b>답안지 사진 촬영</b><div class="small mt">손글씨 답안을 촬영하면 자동으로 글자를 인식(OCR)합니다</div></div>
+    <button class="btn ghost block mt" onclick="uploadPhoto()">📁 갤러리에서 선택</button>
+    <div class="info-banner mt2">✍️ 종이에 손으로 쓴 답안을 사진으로 올리면 OCR이 텍스트로 변환합니다. 변환 결과를 확인·수정한 뒤 제출하세요.</div>`;
+  }
+  return head + `
+  <div class="pcard" style="padding:11px;display:flex;gap:11px;align-items:center">
+    <div class="photo-thumb">📄</div>
+    <div class="small" style="flex:1"><b>답안 사진 업로드됨</b><br><span class="muted">IMG_7050.jpg · OCR 인식 완료</span></div>
+    <button class="btn ghost sm" onclick="retakePhoto()">🔄 다시 촬영</button>
+  </div>
+  <p class="small mt2" style="font-weight:700">OCR 인식 결과 <span class="muted" style="font-weight:400">· <span style="color:var(--danger)">빨간 글자</span>는 오인식 가능, 아래에서 확인·수정</span></p>
+  <div class="ocr-preview mt">${OCR_HL}</div>
+  <div class="field mt"><label>인식 텍스트 (수정 가능)</label>
+    <textarea class="input" id="wr_text" style="min-height:120px">${r.text}</textarea>
+    <span class="hint"><span id="wr_count">${r.text.length}</span>자 · 인식 오류가 없는지 확인하세요</span></div>
+  <label class="chk-inline"><input type="checkbox" id="wr_ok"> OCR 인식 결과를 확인했습니다</label>
+  <button class="btn primary lg mt" onclick="submitExam()">확인했어요 · 제출하기</button>`;
 }
+function uploadPhoto(){ session.draft.writing.photo=true; if(!session.draft.writing.text) session.draft.writing.text=OCR_TEXT; render(); toast('📷 사진 업로드 · OCR 인식 완료'); }
+function retakePhoto(){ const el=document.getElementById('wr_text'); if(el) session.draft.writing.text=el.value; session.draft.writing.photo=false; render(); }
 function stuSubmitted(){
   return `<div class="center" style="padding-top:40px">
     <div style="width:78px;height:78px;border-radius:50%;background:var(--instructor-bg);color:var(--ok);font-size:40px;display:grid;place-items:center;margin:0 auto">✓</div>
@@ -613,7 +642,7 @@ function startExam(){
   session.draft={vocab:new Array(QUESTIONS.vocab.length).fill(null),
                  listening:new Array(QUESTIONS.listening.length).fill(null),
                  reading:new Array(QUESTIONS.reading.length).fill(null),
-                 speaking:{sec:0,stt:''}, writing:{text:''}};
+                 speaking:{sec:0}, writing:{photo:false,text:''}};
   session.qi=0; session.examStart=Date.now(); go('vocab');
 }
 function pick(area,qi,i){ session.draft[area][qi]=i; render(); }
@@ -627,7 +656,6 @@ function playAudio(qi){ const el=document.getElementById('audioText_'+qi); if(el
 function toggleRec(){
   if(session.recording){
     clearInterval(session.recTimer); session.recording=false; session.draft.speaking.sec=session.recSec;
-    session.draft.speaking.stt=(document.getElementById('sp_stt')?document.getElementById('sp_stt').value:session.draft.speaking.stt);
     render();
   } else {
     session.recording=true; session.recSec=0;
@@ -637,11 +665,13 @@ function toggleRec(){
 }
 function saveSpeaking(){
   if(session.recording) toggleRec();
-  const el=document.getElementById('sp_stt'); if(el) session.draft.speaking.stt=(el.value||'').trim();
+  if(!(session.draft.speaking.sec>0)){ toast('먼저 녹음해 주세요'); return; }
   go('writing');
 }
 function submitExam(){
   const el=document.getElementById('wr_text'); if(el) session.draft.writing.text=(el.value||'').trim();
+  const ok=document.getElementById('wr_ok');
+  if(ok && !ok.checked){ toast('OCR 인식 결과를 확인해 주세요'); return; }
   openModal({ic:'📝',title:'정말 제출하시겠습니까?',body:'제출 후에는 답안을 수정할 수 없습니다. 말하기·쓰기는 채점 후 결과가 공개됩니다.',yes:'네, 제출합니다',onYes:()=>{
     const me=getStudent(session.me);
     me.answers={vocab:session.draft.vocab,listening:session.draft.listening,reading:session.draft.reading};
@@ -842,9 +872,9 @@ function sbGrade(isAdmin){
   const humanSum=v1+v2;
   const diff=Math.abs(humanSum-aiSum);
   const respBlock = isSpeak
-    ? `<div class="player"><button class="play" onclick="toast('▶ 재생 (데모)')">▶</button><div class="wave">${[50,90,40,100,60,30,80,55,70,35].map(h=>'<i style="height:'+h+'%"></i>').join('')}</div><span class="small mono muted">${fmt(resp.sec||0)}</span></div>
-       <div class="passage"><b class="small" style="color:var(--system)">STT 자동 전사</b><br>${resp.stt||'(전사 없음)'}</div>`
-    : `<div class="passage"><b class="small" style="color:var(--system)">OCR 변환 텍스트</b><br>${resp.text||'(작성 없음)'}</div>`;
+    ? `<div class="player"><button class="play" onclick="toast('▶ 녹음 재생 (데모)')">▶</button><div class="wave">${[50,90,40,100,60,30,80,55,70,35].map(h=>'<i style="height:'+h+'%"></i>').join('')}</div><span class="small mono muted">${fmt(resp.sec||0)}</span></div>
+       <div class="passage"><b class="small" style="color:var(--system)">🎧 녹음 응답</b><br>녹음 시간 ${fmt(resp.sec||0)} · 재생하여 유창성·구성력을 평가하세요. (음성 파일 기반 채점)</div>`
+    : `<div class="passage"><b class="small" style="color:var(--system)">📄 OCR 변환 텍스트 (학생 확인 완료)</b><br>${resp.text||'(작성 없음)'}</div>`;
   const rubricTitle = isSpeak?'유창성 5 + 구성력 5 = 10점':'구성력 5 + 정확성 5 = 10점';
   return `<div class="page-head"><div><h1>채점 · 루브릭 + AI</h1><div class="sub">말하기·쓰기 인간 채점 · AI 가채점 비교</div></div></div>
   <div class="tabs"><button class="${isSpeak?'on':''}" onclick="setGradeTab('speaking')">🎙 말하기</button><button class="${!isSpeak?'on':''}" onclick="setGradeTab('writing')">✍ 쓰기</button></div>
