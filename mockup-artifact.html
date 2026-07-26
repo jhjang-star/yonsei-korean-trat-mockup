@@ -159,6 +159,24 @@ tbody tr:last-child td{border-bottom:0}
 .photo-thumb{width:56px;height:72px;border-radius:8px;background:linear-gradient(135deg,#dbe6f2,#c3d4e8);display:grid;place-items:center;font-size:24px;flex:none}
 .chk-inline{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;padding:10px 0;cursor:pointer}
 .chk-inline input{width:17px;height:17px;accent-color:var(--student)}
+/* 서비스 도식 */
+.flow{max-width:800px;margin:0 auto;padding-bottom:20px}
+.flow-legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-bottom:22px;font-size:12px}
+.flow-legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.flow-legend i{width:13px;height:13px;border-radius:4px;display:inline-block}
+.fnode{border-radius:14px;padding:13px 16px;border:1px solid;box-shadow:var(--shadow)}
+.fnode .frole{font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;display:inline-block;padding:2px 9px;border-radius:20px;margin-bottom:7px}
+.fnode .ftitle{font-size:14.5px;font-weight:700}
+.fnode .fdesc{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.65}
+.f-admin{background:var(--admin-bg);border-color:#ddd0f5}.f-admin .frole{background:var(--admin);color:#fff}
+.f-student{background:var(--student-bg);border-color:#cfe1f5}.f-student .frole{background:var(--student);color:#fff}
+.f-instr{background:var(--instructor-bg);border-color:#bfe6dc}.f-instr .frole{background:var(--instructor);color:#fff}
+.f-system{background:#eef1f5;border-color:var(--border)}.f-system .frole{background:var(--system);color:#fff}
+.farrow{text-align:center;color:#9aa6b6;font-size:20px;line-height:1;padding:5px 0;font-weight:700}
+.fbranch{display:flex;gap:14px;align-items:stretch}.fbranch>div{flex:1;display:flex;flex-direction:column}
+.fbranch .blabel{text-align:center;font-size:11px;font-weight:800;color:var(--muted);margin-bottom:8px}
+.fsplit{text-align:center;font-size:12px;font-weight:800;color:var(--muted);padding:5px 0}
+@media(max-width:640px){.fbranch{flex-direction:column}}
 .perm-note{font-size:12px;color:var(--muted);background:var(--border-2);border-radius:9px;padding:9px 12px;margin-top:10px}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .row-between{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
@@ -182,6 +200,7 @@ tbody tr:last-child td{border-bottom:0}
   <div class="role-tabs" id="roleTabs">
     <button data-role="student" class="on">🎓 학생 응시</button>
     <button data-role="staff">🖥️ 관리자·강사</button>
+    <button data-role="flow">🗺️ 서비스 도식</button>
   </div>
   <div class="tb-right">
     <div class="subrole hidden" id="subRole">
@@ -428,11 +447,14 @@ const app=()=>document.getElementById('app');
 function render(){
   updateHint();
   if(session.role==='student') renderStudent();
+  else if(session.role==='flow') renderFlow();
   else renderStaff();
 }
 function updateHint(){
   const h=document.getElementById('hintBar');
-  if(session.role==='student'){
+  if(session.role==='flow'){
+    h.innerHTML='🗺️ <b>서비스 전체 흐름</b> · 관리자 시험 생성 → 학생 등록 → 학생 응시(적응형) → 자동·인간 채점 → <b>5개 영역 종합</b>으로 급수 산정·분반까지의 단계입니다. 색상은 담당 역할.';
+  } else if(session.role==='student'){
     h.innerHTML='🎓 <b>학생 시뮬레이션</b> · 공통코드 <b>'+CODE+'</b>로 로그인 → 응시 → 자동채점 즉시 확인. 말하기·쓰기는 제출 후 <b>관리자·강사 탭</b>에서 채점하면 최종 결과가 열립니다.';
   } else if(session.sub==='instructor'){
     h.innerHTML='🖥️ <b>강사</b> · 제출된 말하기·쓰기가 <b>채점 목록</b>에 실제로 뜹니다. 루브릭 점수를 입력·확정하면 관리자 분반에 반영돼요. (관리자 전용 기능은 🔒)';
@@ -441,6 +463,51 @@ function updateHint(){
   }
 }
 
+function renderFlow(){
+  const node=(role,cls,title,desc)=>`<div class="fnode ${cls}"><span class="frole">${role}</span><div class="ftitle">${title}</div>${desc?`<div class="fdesc">${desc}</div>`:''}</div>`;
+  const arr=`<div class="farrow">↓</div>`;
+  app().innerHTML=`
+  <div class="flow">
+    <h2 style="text-align:center;font-size:20px;margin-bottom:6px">서비스 전체 흐름도</h2>
+    <p class="center small muted" style="margin-bottom:18px">연세 어학당 한국어 배치고사 · 시험 생성부터 분반까지</p>
+    <div class="flow-legend">
+      <span><i style="background:var(--admin)"></i> 관리자</span>
+      <span><i style="background:var(--instructor)"></i> 강사</span>
+      <span><i style="background:var(--student)"></i> 학생</span>
+      <span><i style="background:var(--system)"></i> 시스템</span>
+    </div>
+    ${node('관리자','f-admin','① 시험 생성','시험명·응시 기간·등급 체계(8급)·평가 영역 구성, 문항 랜덤 출제 설정')}
+    ${arr}
+    ${node('관리자','f-admin','② 학생 등록 · 공통 인증코드 발급','엑셀 일괄 등록 → 학교 공통 인증코드 자동 생성 → 문자·이메일 발송')}
+    ${arr}
+    ${node('학생','f-student','③ 접근 · 로그인 / 가입','QR·링크 접근 → 공통 인증코드로 가입(가입 즉시 배치고사 자동 세팅)')}
+    ${arr}
+    ${node('학생','f-student','④ 어휘·문법 평가 (선행)','5개 영역 중 가장 먼저 응시')}
+    ${arr}
+    ${node('시스템','f-system','⑤ 수준 자동 판정 (적응형)','어휘·문법 점수로 이후 영역의 출제 난이도(수준)를 결정 · 학생에게 비노출')}
+    ${arr}
+    ${node('학생','f-student','⑥ 듣기·읽기 → 말하기(녹음)·쓰기(사진 OCR)','임시저장·이어하기 지원 → 제출 확인 모달 → 제출')}
+    ${arr}
+    <div class="fsplit">— 채점 분기 —</div>
+    <div class="fbranch">
+      <div>
+        <div class="blabel">실시간 · 자동</div>
+        ${node('시스템','f-system','자동 채점','어휘문법·듣기·읽기 → 제출 즉시 채점 → 학생에게 바로 공개')}
+      </div>
+      <div>
+        <div class="blabel">인간 채점</div>
+        ${node('강사','f-instr','루브릭 채점','말하기·쓰기 → AI 가채점 대비 루브릭 점수 입력·확정')}
+        <div class="farrow">↓</div>
+        ${node('관리자','f-admin','AI ↔ 인간 검증','차이 큰 건 검토·재채점')}
+      </div>
+    </div>
+    ${arr}
+    ${node('관리자','f-admin','⑦ 5개 영역 종합 → 급수 산정 · 분반','5영역 종합 점수 → 커트라인 → 급수 + 세부단계(상/중/하) → 분반 확정 · 엑셀 내보내기')}
+    ${arr}
+    ${node('학생','f-student','⑧ 최종 결과 · 반 안내','종합 급수·배정 반·레이더 차트·AI 개인화 피드백 확인')}
+    <div class="perm-note" style="margin-top:20px">💡 실제 서비스 도식(원본 이미지)이 있으면 이 자리에 그대로 넣어 드릴 수 있어요.</div>
+  </div>`;
+}
 function phone(inner){ return '<div class="phone"><div class="notch"></div><div class="screen"><div class="statusbar"><span>9:41</span><span>📶 5G 🔋</span></div><div class="pscreen">'+inner+'</div></div></div>'; }
 
 function renderStudent(){
