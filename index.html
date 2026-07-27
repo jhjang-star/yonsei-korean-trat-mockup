@@ -236,49 +236,41 @@ tbody tr:last-child td{border-bottom:0}
   </div>
 </div>
 
+<script src="bank.js"></script>
 <script>
 /* =========================================================
    1) 콘텐츠 (문항 · 정답 · 배점) — 실제 채점에 사용
+   실제 문항: 연세대 제공 문제은행(1~4회차)에서 발췌 → window.BANK (bank.js)
    ========================================================= */
 const CODE = 'YSKLI-2026-A1';
+const BANK = window.BANK || {listening:{},reading:{},speaking:{},writing:{},vocab:{}};
+const mapLis = it => ({audio:it.script, q:it.q, c:it.choices, a:it.answer, level:it.level});
+const mapRead = it => ({passage:'', q:it.q, c:it.choices, a:it.answer, level:it.level});
+function bankPick(area,g,n){
+  for(let gg=g; gg>=1; gg--){ const arr=BANK[area]&&BANK[area][gg]; if(arr&&arr.length>=n) return arr.slice(0,n).map(area==='listening'?mapLis:mapRead); }
+  const any=BANK[area]&&(BANK[area][g]||BANK[area][1]); return (any||[]).slice(0,n).map(area==='listening'?mapLis:mapRead);
+}
+function bankPrompt(area,g){ const arr=BANK[area]&&(BANK[area][g]||BANK[area][3]||BANK[area][1]); return (arr&&arr[0])||null; }
 const AREAS = ['vocab','listening','reading','speaking','writing'];
 const AREA_KO = {vocab:'어휘·문법',listening:'듣기',reading:'읽기',speaking:'말하기',writing:'쓰기'};
 
+/* 기본(고정형) 문항 = 실제 문항 은행에서 난이도 스프레드로 구성 (없으면 폴백) */
+const FALLBACK={
+  vocab:[{q:'어제 친구____ 영화를 봤어요.', c:['을','와','에서','으로'], a:1}],
+  listening:[{audio:'(남자) 병원이 어디예요? (여자) 은행 옆이에요.', q:'남자가 찾는 곳은?', c:['은행','병원','학교','시장'], a:1}],
+  reading:[{passage:'', q:'이 글의 중심 내용은?', c:['가','나','다','라'], a:0}],
+};
+const REAL_VOCAB=[].concat(BANK.vocab&&BANK.vocab[1]||[], BANK.vocab&&BANK.vocab[2]||[], BANK.vocab&&BANK.vocab[3]||[]).slice(0,10);
 const QUESTIONS = {
-  vocab:[
-    {q:'어제 친구____ 영화를 봤어요.', c:['을','와','에서','으로'], a:1},
-    {q:'밥을 다 먹은 ____ 이를 닦아요.', c:['전에','후에','동안','사이'], a:1},
-    {q:'이 옷은 너무 비싸____ 안 살 거예요.', c:['도','서','면','러'], a:1},
-    {q:'날씨가 추우니까 창문을 ____.', c:['여세요','닫으세요','엽니다','열까요'], a:1},
-    {q:'그는 한국어를 잘____ 위해 매일 공부한다.', c:['하기','할','한','하는'], a:0},
-    {q:'학교에 가____ 우연히 친구를 만났어요.', c:['다가','으려고','기 전에','거나'], a:0},
-    {q:'이 우산은 제____ 아닙니다.', c:['가','것이','에게','한테'], a:1},
-    {q:'비가 ____ 우산을 꼭 가져가세요.', c:['오면','오니까','와도','오거나'], a:0},
-    {q:'저는 매운 음식을 잘 먹____ 못해요.', c:['지','고','기','게'], a:0},
-    {q:'숙제를 다 ____ 후에 게임을 할 거예요.', c:['하는','한','할','하고'], a:1},
-  ],
-  listening:[
-    {audio:'(남자) 실례합니다, 병원이 어디예요?  (여자) 은행 옆에 있어요.', q:'남자가 찾는 곳은 어디입니까?', c:['은행','병원','학교','시장'], a:1},
-    {audio:'(여자) 주말에 뭐 했어요?  (남자) 도서관에서 책을 읽었어요.', q:'남자가 주말에 한 일은?', c:['운동','도서관에서 독서','여행','청소'], a:1},
-    {audio:'(안내방송) 다음 역에서 3번 출구로 나가시기 바랍니다.', q:'몇 번 출구로 나가야 합니까?', c:['1번','2번','3번','4번'], a:2},
-  ],
-  reading:[
-    {passage:'요즘 많은 사람들이 건강을 위해 자전거를 탑니다. 자전거는 환경에도 좋고 운동도 됩니다. 그래서 시청에서는 여러 곳에 자전거 대여소를 만들었습니다.',
-     q:'이 글의 중심 내용은?', c:['자전거 이용의 장점과 대여소 설치','자전거 사고의 위험','시청의 예산 문제','대중교통 이용법'], a:0},
-    {passage:'박물관은 화요일부터 일요일까지 문을 엽니다. 월요일은 쉽니다. 관람 시간은 오전 10시부터 오후 6시까지입니다.',
-     q:'박물관이 쉬는 날은?', c:['일요일','월요일','화요일','토요일'], a:1},
-    {passage:'저는 매일 아침 6시에 일어나서 공원에서 30분 동안 달리기를 합니다. 그 후에 샤워를 하고 회사에 갑니다.',
-     q:'이 사람이 아침에 가장 먼저 하는 일은?', c:['샤워','출근','기상 후 달리기','아침 식사'], a:2},
-  ],
+  vocab: REAL_VOCAB.length?REAL_VOCAB:FALLBACK.vocab,
+  listening: [].concat(bankPick('listening',1,1), bankPick('listening',2,1), bankPick('listening',3,1)).filter(Boolean),
+  reading: [].concat(bankPick('reading',2,1), bankPick('reading',3,1), bankPick('reading',4,1)).filter(Boolean),
 };
-/* 문제 유형 라벨 (공식 출제구성표 기준) */
-const QTYPES={
-  vocab:['알맞은 조사 고르기','알맞은 표현 고르기','알맞은 연결어미 고르기','알맞은 문법 고르기','알맞은 문법 고르기','알맞은 연결어미 고르기','알맞은 조사 고르기','알맞은 연결어미 고르기','알맞은 문법 고르기','알맞은 문법 고르기'],
-  listening:['대화 듣고 장소 고르기','대화 듣고 한 일 고르기','안내 방송 내용 고르기'],
-  reading:['중심 내용 고르기','세부 정보 고르기(다른 내용)','세부 정보 고르기'],
-};
-const SPEAK_PROMPT = '내가 좋아하는 계절과 그 이유를 1분간 말해 보세요.';
-const WRITE_PROMPT = '주말에 한 일에 대해 200자 내외로 써 보세요.';
+if(!QUESTIONS.listening.length) QUESTIONS.listening=FALLBACK.listening;
+if(!QUESTIONS.reading.length) QUESTIONS.reading=FALLBACK.reading;
+const QTYPES={};   // 실제 문항엔 유형 라벨 미표기(은행 유형 상이)
+const DEFAULT_SPEAK='내가 좋아하는 계절과 그 이유를 이야기하십시오.';
+const DEFAULT_WRITE='주말에 한 일에 대해 200자 내외로 쓰십시오.';
 /* 쓰기 사진 → OCR 시뮬레이션 (오인식 후보는 빨간색) */
 const OCR_TEXT = '지난 주말에 친구들과 공원에 갔습니다. 날씨가 따뜻하고 사람이 많았습니다. 우리는 자전거를 타고 사진도 찍었습니다.';
 const OCR_HL = '지난 주말에 친구들과 공원에 갔습니다. 날씨가 <span class="bad" title="오인식 가능">따뜻</span>하고 사람이 많았습니다. 우리는 <span class="bad" title="오인식 가능">자전거</span>를 타고 사진도 찍었습니다.';
@@ -292,8 +284,17 @@ function defaultSettings(){
     rule:'sum',
     // 8급 체계 (온라인 글로벌 한국어 과정 기준) · 종합 점수 커트라인
     cutlines:{8:90,7:80,6:70,5:60,4:50,3:40,2:25,1:0},
+    mode:'fixed',   // 출제 방식: fixed(고정형) | adaptive(적응형·조기종료)
   };
 }
+/* 어휘·문법 정답률로 라우팅 등급(1~8) 산출 (적응형 출제 수준) */
+function routedGrade(){
+  if(!session||!session.draft||!session.draft.vocab) return 3;
+  const ans=session.draft.vocab, qs=QUESTIONS.vocab; let c=0; qs.forEach((q,i)=>{ if(ans[i]===q.a) c++; });
+  return gradeFromTotal(Math.round(c/qs.length*100))||1;
+}
+function speakPromptText(){ const p=bankPrompt('speaking',routedGrade()); return p?p.prompt:DEFAULT_SPEAK; }
+function writePromptText(){ const p=bankPrompt('writing',routedGrade()); return p?p.prompt:DEFAULT_WRITE; }
 const GRADES=[1,2,3,4,5,6,7,8];
 function newStudent(id,name,username){
   return {id,name,username,joined:true,
@@ -344,7 +345,7 @@ function fillExam(stu, correctCounts, speakResp, writeResp){
    3) 채점 로직 (실제 계산)
    ========================================================= */
 function areaAutoScore(stu,area){
-  const qs=QUESTIONS[area], ans=stu.answers[area]||[];
+  const qs=(stu.examItems&&stu.examItems[area])||QUESTIONS[area], ans=stu.answers[area]||[];
   let correct=0; qs.forEach((q,i)=>{ if(ans[i]===q.a) correct++; });
   return {correct, total:qs.length, score:Math.round(correct/qs.length*DB.settings.weights[area])};
 }
@@ -358,8 +359,8 @@ function computeAuto(stu){
 }
 /* 상세 루브릭 (공식 채점 구인, 3점 척도) — 말하기 4범주, 쓰기 3범주 */
 const RUBRIC={
-  speaking:[{k:'내용',d:'적절성·풍부성'},{k:'조직',d:'체계성·응집성'},{k:'표현',d:'정확성·다양성'},{k:'전달',d:'발음·억양·속도'}],
-  writing:[{k:'내용',d:'적절성·풍부성'},{k:'조직',d:'체계성·응집성'},{k:'표현',d:'정확성·다양성·적절성'}],
+  speaking:[{k:'내용',d:'적합성·풍부성'},{k:'조직',d:'체계성·응집성'},{k:'표현',d:'정확성·다양성'},{k:'전달',d:'발음·억양·속도'}],
+  writing:[{k:'내용',d:'적합성·풍부성'},{k:'조직',d:'체계성·응집성'},{k:'표현',d:'정확성·다양성·적절성'}],
 };
 function rubricMax(area){ return RUBRIC[area].length*3; }
 function sumArr(a){ return (a||[]).reduce((x,y)=>x+y,0); }
@@ -564,7 +565,7 @@ function stuIntro(){
     <div class="pcard" style="padding:11px 13px">4️⃣ 쓰기 <span class="muted small" style="float:right">1~2문항 · 40분</span></div>
     <div class="pcard" style="padding:11px 13px">5️⃣ 말하기 <span class="muted small" style="float:right">3~4문항 · 20분</span></div>
   </div>
-  <div class="info-banner mt2">ℹ️ 어휘·문법 결과로 이후 영역의 출제 수준(자기 등급 ±1)이 자동 결정됩니다. 답을 고르면 다음 문항으로 넘어가며 <b>이전 문항으로 돌아갈 수 없습니다.</b></div>
+  <div class="info-banner mt2">ℹ️ 어휘·문법 결과로 이후 영역의 출제 수준(자기 등급 ±1)이 자동 결정됩니다. 답을 고르면 다음 문항으로 넘어가며 <b>이전 문항으로 돌아갈 수 없습니다.</b><br>📦 문항은 <b>연세대 실제 문제은행(1~4회차)</b>에서 출제됩니다. 현재 출제 방식: <b>${DB.settings.mode==='adaptive'?'적응형(등급별 출제)':'고정형(전원 동일)'}</b> <span class="muted">(관리자 설정에서 변경)</span></div>
   <div class="lock-banner mt">🔒 <b>온라인 감독</b> 안내 · 웹캠·화면·마이크로 응시 과정이 기록되며, AI가 얼굴 인증과 이상행동(시선·소리)을 탐지해 부정행위를 방지합니다.</div>
   <button class="btn primary lg mt2" onclick="startExam()">시작하기</button>`;
 }
@@ -574,21 +575,21 @@ function stepLabel(step){
   return STEP_ORDER.map((a,i)=>`<div class="st ${i<idx?'done':i===idx?'on':''}">${AREA_KO[a].replace('·','')}</div>`).join('');
 }
 function stuExam(area){
-  const qs=QUESTIONS[area]; const qi=session.qi; const q=qs[qi];
+  const qs=examItemsFor(area); const qi=session.qi; const q=qs[qi];
   const picked=session.draft[area][qi];
   let media='';
   if(area==='listening'){
     media=`<div class="player"><button class="play" onclick="playAudio(${qi})">▶</button>
-      <div class="wave">${[40,70,100,55,80,35,90,60,45,75].map(h=>'<i style="height:'+h+'%"></i>').join('')}</div><span class="small mono muted">0:12</span></div>
-      <div class="passage" id="audioText_${qi}" style="display:none"><b class="small" style="color:var(--system)">🔊 음성 내용</b><br>${q.audio}</div>`;
+      <div class="wave">${[40,70,100,55,80,35,90,60,45,75].map(h=>'<i style="height:'+h+'%"></i>').join('')}</div><span class="small mono muted">🔊 2회 듣기</span></div>
+      <div class="passage" id="audioText_${qi}" style="display:none"><b class="small" style="color:var(--system)">🔊 음성 내용(대본)</b><br>${(q.audio||'').replace(/\n/g,'<br>')}</div>`;
   }
-  if(area==='reading') media=`<div class="passage">${q.passage}</div>`;
+  if(area==='reading' && q.passage) media=`<div class="passage">${q.passage}</div>`;
   const choices=q.c.map((c,i)=>`<button class="choice ${picked===i?'sel':''}" onclick="pick('${area}',${qi},${i})"><span class="k">${i+1}</span> ${c}</button>`).join('');
-  const qtype=(QTYPES[area]||[])[qi]||'';
+  const lv=q.level?`<span class="pill system no" style="font-size:10.5px">난이도 ${q.level}</span>`:'';
   return `<div class="row-between"><span class="qtag">${AREA_KO[area]}</span><span class="timer-chip mono">⏱ ${examTimer()}</span></div>
   <div class="steps">${stepLabel(area)}</div>
   <div class="progress"><i style="width:${Math.round((qi)/qs.length*100)}%"></i></div>
-  <div class="row-between" style="margin-top:6px"><p class="small muted">문항 ${qi+1} / ${qs.length}</p>${qtype?`<span class="pill system no" style="font-size:10.5px">${qtype}</span>`:''}</div>
+  <div class="row-between" style="margin-top:6px"><p class="small muted">문항 ${qi+1} / ${qs.length}</p>${lv}</div>
   ${media}
   <div class="qtext">${q.q}</div>
   <div class="choices">${choices}</div>
@@ -603,7 +604,7 @@ function stuSpeaking(){
   const hasRec = r.sec>0 && !session.recording;
   return `<div class="row-between"><span class="qtag">말하기</span><span class="timer-chip mono">⏱ ${examTimer()}</span></div>
   <div class="steps">${stepLabel('speaking')}</div>
-  <div class="qtext" style="font-size:14px">${SPEAK_PROMPT}</div>
+  <div class="qtext" style="font-size:14px">${speakPromptText()}</div>
   <div class="pcard center">
     <button class="rec-btn ${session.recording?'':'idle'}" onclick="toggleRec()">${session.recording?'■':'●'}</button>
     <div style="font-size:22px;font-weight:900;margin-top:12px" class="mono" id="recTime">${fmt(session.recording?session.recSec:r.sec)}</div>
@@ -617,7 +618,7 @@ function stuWriting(){
   const r=session.draft.writing;
   const head=`<div class="row-between"><span class="qtag">쓰기</span><span class="timer-chip mono">⏱ ${examTimer()}</span></div>
   <div class="steps">${stepLabel('writing')}</div>
-  <div class="qtext" style="font-size:14px">${WRITE_PROMPT}</div>`;
+  <div class="qtext" style="font-size:14px">${writePromptText()}</div>`;
   if(!r.photo){
     return head + `
     <div class="dropzone" onclick="uploadPhoto()"><div class="big">📷</div><b>답안지 사진 촬영</b><div class="small mt">손글씨 답안을 촬영하면 자동으로 글자를 인식(OCR)합니다</div></div>
@@ -709,9 +710,23 @@ function doLogin(){
   else { me.joined=true; me.name=name; }
   session.me=me.id; session.step='home'; toast('✓ 로그인 완료 · 배치고사 세팅됨'); render();
 }
+function examItemsFor(area){
+  if(area==='listening'||area==='reading'){ if(session.examSel&&session.examSel[area]) return session.examSel[area]; }
+  return QUESTIONS[area];
+}
+function buildExamSel(){
+  // 고정형: 기본 실제 세트 / 적응형: 어휘 결과 등급의 실제 문항으로 교체 (조기종료 개념)
+  if(DB.settings.mode==='adaptive'){
+    const g=routedGrade();
+    session.examSel={grade:g, listening:bankPick('listening',g,QUESTIONS.listening.length), reading:bankPick('reading',g,QUESTIONS.reading.length)};
+  } else {
+    session.examSel={grade:null, listening:QUESTIONS.listening, reading:QUESTIONS.reading};
+  }
+}
 function startExam(){
   const me=getStudent(session.me);
   me.progress='in_progress';
+  session.examSel=null;
   session.draft={vocab:new Array(QUESTIONS.vocab.length).fill(null),
                  listening:new Array(QUESTIONS.listening.length).fill(null),
                  reading:new Array(QUESTIONS.reading.length).fill(null),
@@ -720,9 +735,12 @@ function startExam(){
 }
 function pick(area,qi,i){ session.draft[area][qi]=i; render(); }
 function nextQ(area){
-  const qs=QUESTIONS[area];
+  const qs=examItemsFor(area);
   if(session.qi<qs.length-1){ session.qi++; render(); }
-  else { const ni=STEP_ORDER.indexOf(area)+1; session.qi=0; go(STEP_ORDER[ni]); }
+  else {
+    if(area==='vocab'){ buildExamSel(); if(DB.settings.mode==='adaptive'){ toast('적응형: 어휘·문법 결과 → '+routedGrade()+'급 수준 문항 출제'); } }
+    const ni=STEP_ORDER.indexOf(area)+1; session.qi=0; go(STEP_ORDER[ni]);
+  }
 }
 function prevQ(){ if(session.qi>0){session.qi--; render();} }
 function playAudio(qi){ const el=document.getElementById('audioText_'+qi); if(el) el.style.display=el.style.display==='none'?'block':'none'; }
@@ -742,6 +760,7 @@ function submitExam(){
   openModal({ic:'📝',title:'정말 제출하시겠습니까?',body:'제출 후에는 답안을 수정할 수 없습니다. 말하기·쓰기는 채점 후 결과가 공개됩니다.',yes:'네, 제출합니다',onYes:()=>{
     const me=getStudent(session.me);
     me.answers={vocab:session.draft.vocab,listening:session.draft.listening,reading:session.draft.reading};
+    me.examItems={vocab:QUESTIONS.vocab, listening:examItemsFor('listening'), reading:examItemsFor('reading')};
     me.responses={speaking:session.draft.speaking, writing:session.draft.writing};
     me.progress='submitted';
     computeAuto(me); computeAI(me);
@@ -1045,6 +1064,10 @@ function sbSettings(){
       <button class="btn primary block mt2" onclick="toast('✓ 설정 저장됨 · 분반 계산에 즉시 반영')">저장</button>
     </div>
   </div>
+  <div class="card mt2"><h3 style="font-size:14px">③ 출제 방식 <span class="muted small">· 연대 확정 대기(TBD)</span></h3>
+    <div class="seg-btns mt"><button class="${DB.settings.mode!=='adaptive'?'on':''}" onclick="setMode('fixed')">고정형 (전원 동일 문항)</button><button class="${DB.settings.mode==='adaptive'?'on':''}" onclick="setMode('adaptive')">적응형 (조기종료·등급별 출제)</button></div>
+    <div class="perm-note">· <b>고정형</b>: 모든 응시자가 같은 문항 세트를 풀고 온라인화만. 문항 수 동일.<br>· <b>적응형</b>: 어휘·문법 결과 등급으로 듣기·읽기·말하기·쓰기 문항을 <b>자기 등급 수준</b>으로 선별 출제(문항 수 절감·CAT/MST). 학생 탭에서 두 방식이 실제로 다르게 동작합니다.</div>
+  </div>
   <div class="card mt2"><h3 style="font-size:14px">참고: 적응형 출제 원리 <span class="muted small">· 온라인글로벌한국어능력시험(IBT/CBT)</span></h3>
     <p class="small muted mt" style="line-height:1.7">① 어휘·문법 <b>최대 60문항</b>을 먼저 응시 → 자동 채점으로 <b>등급(1급~8급, 상/중/하)</b> 판정.<br>② 그 등급 기준 <b>자기 등급 ±1 수준</b>의 듣기·읽기 문항이 각 6문항씩 제공되고, 쓰기·말하기도 등급에 맞는 과제가 자동 할당.<br>③ 객관식에서 <b>정답률 50%를 처음 못 넘긴 등급으로 확정</b>되고 다음 등급 문항엔 도전하지 않음.</p>
     <div class="grid-2 mt"><div>
@@ -1059,6 +1082,7 @@ function simPlace(){ const el=document.getElementById('simScore'); if(!el) retur
 function setWeight(a,v){ DB.settings.weights[a]=parseInt(v)||0; DB.students.forEach(s=>{if(s.auto)computeAuto(s);}); renderStaff(); }
 function setCut(g,v){ DB.settings.cutlines[g]=parseInt(v)||0; renderStaff(); }
 function setRule(r){ DB.settings.rule=r; renderStaff(); }
+function setMode(m){ DB.settings.mode=m; toast(m==='adaptive'?'적응형(조기종료)으로 전환 · 어휘 결과 등급의 문항 출제':'고정형으로 전환 · 전 응시자 동일 문항'); renderStaff(); }
 
 /* =========================================================
    7) 공통 UI
