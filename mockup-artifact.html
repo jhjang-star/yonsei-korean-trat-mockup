@@ -431,9 +431,18 @@ function areaGradeLabel(stu,area){
   const sc=areaScore20(stu,area); if(sc==null) return null;
   const gi=gradeInfo(Math.round(sc/DB.settings.weights[area]*100)); return gi?gi.label:null;
 }
+/* 권장 반 = 평가 급수보다 한 단계 위 (이미 그 수준을 이해하므로 다음 단계를 배움)
+   같은 급수 내 다음 세부단계 → 최상위면 다음 급수 하 → 8급 상은 유지 */
+function nextClassLevel(g,sub){
+  const arr=SUBLEVELS[g]; const i=arr.indexOf(sub);
+  if(i>=0 && i<arr.length-1) return {g, sub:arr[i+1]};
+  if(g<8) return {g:g+1, sub:SUBLEVELS[g+1][0]};
+  return {g, sub};
+}
+function classFor(stu){ const p=placement(stu); if(!p) return null; const n=nextClassLevel(p.g,p.sub); return {g:n.g, sub:n.sub, label:n.g+'급 '+n.sub}; }
 function assignClass(stu){
-  const p=placement(stu); stu.assignedGrade=p?p.g:null; stu.assignedSub=p?p.sub:null;
-  stu.assignedClass = p? (p.label+'반') : null;
+  const c=classFor(stu); stu.assignedGrade=c?c.g:null; stu.assignedSub=c?c.sub:null;
+  stu.assignedClass = c? (c.label+'반') : null;
 }
 function areaScore20(stu,area){
   if(area==='speaking'||area==='writing') return humanArea20(stu,area);
@@ -665,7 +674,7 @@ function stuResult(me){
       <div class="row-between"><span class="small muted">종합 급수 <span style="font-weight:400">(5영역 종합)</span></span>${gradeChipStu(me,false)}</div>
       <div class="row-between mt"><span class="small muted">5영역 종합 점수</span><span class="mono" style="font-weight:800">${t} / 100 → ${p.label}</span></div>
       <div class="row-between mt"><span class="small muted">어휘·문법 원점수</span><span class="mono">${me.vocabRaw60}/60 · 출제수준 ${me.level||'—'}</span></div>
-      <div class="row-between mt"><span class="small muted">배정 반</span><span>${me.classConfirmed&&me.assignedClass?('<b>'+me.assignedClass+'</b>'):'<span class="pill admin no">배정 대기</span>'}</span></div>
+      <div class="row-between mt"><span class="small muted">배정 반 <span style="font-weight:400">(권장 · 한 단계 ↑)</span></span><span>${me.classConfirmed&&me.assignedClass?('<b>'+me.assignedClass+'</b>'):`<span class="pill admin no">배정 대기 (${classFor(me)?classFor(me).label+'반':'—'})</span>`}</span></div>
       <p class="small mt2" style="line-height:1.7">${aiFeedback(me)}</p></div>
       <div id="radarBox" class="mt2 center"></div>
       <div class="radar-legend"><span><i style="background:var(--admin)"></i> 내 성취도</span><span><i style="border-top:2px dashed var(--muted);height:0"></i> 응시자 평균</span></div>`;
@@ -680,9 +689,9 @@ function stuResult(me){
   <button class="btn ghost block mt2" onclick="go('home')">← 홈으로</button>`;
 }
 function aiFeedback(me){
-  const p=placement(me); const lbl=p?p.label:'';
+  const p=placement(me); const lbl=p?p.label:''; const c=classFor(me); const rec=c?c.label:'';
   const weak=AREAS.map(a=>({a,s:areaScore20(me,a)||0})).sort((x,y)=>x.s-y.s)[0];
-  return `5개 영역 종합 <b>${totalScore(me)}/100</b> 기준 <b>${lbl}</b> 수준입니다. 정규 <b style="color:var(--student)">${lbl}반</b> 수업을 권장합니다. 상대적으로 <b style="color:var(--danger)">${AREA_KO[weak.a]}</b> 영역 보완이 필요해 보입니다.`;
+  return `5개 영역 종합 <b>${totalScore(me)}/100</b>, 평가 결과는 <b>${lbl}</b> 수준입니다. ${lbl}까지는 이미 이해하고 있으므로 한 단계 높은 <b style="color:var(--student)">${rec}반</b> 수업을 권장합니다. 상대적으로 <b style="color:var(--danger)">${AREA_KO[weak.a]}</b> 영역 보완이 필요해 보입니다.`;
 }
 
 /* =========================================================
@@ -1001,7 +1010,7 @@ function sbClass(){
     const cells=AREAS.map(a=>{const v=areaScore20(s,a);return `<td class="mono">${v==null?'<span class="muted">대기</span>':v}</td>`}).join('');
     return `<tr><td><b>${s.name}</b></td>${cells}<td class="mono" style="font-weight:800">${s.vocabRaw60==null?'—':s.vocabRaw60+'/60'}</td><td class="mono">${t==null?'—':t}</td>
       <td>${full?gradeChipStu(s,true):'<span class="pill warn no">대기</span>'}</td>
-      <td>${!full?'<span class="pill warn no">채점 대기</span>':(s.classConfirmed?('<b>'+s.assignedClass+'</b>'):`<button class="btn primary sm" onclick="confirmOne('${s.id}')">${placement(s).label}반 확정 →</button>`)}</td></tr>`;
+      <td>${!full?'<span class="pill warn no">채점 대기</span>':(s.classConfirmed?('<b>'+s.assignedClass+'</b>'):`<button class="btn primary sm" onclick="confirmOne('${s.id}')">${classFor(s).label}반 확정 →</button>`)}</td></tr>`;
   }).join('');
   const pend=ready.filter(s=>!s.classConfirmed).length;
   return `<div class="page-head"><div><h1>분반 결과</h1><div class="sub">종합 급수 자동 산정 · 반 배정</div></div><div class="spacer"></div>
@@ -1017,7 +1026,7 @@ function sbClass(){
     <span class="small muted">채점 확정 ${ready.length}명 · 분반 대기 <b style="color:var(--warn)">${pend}명</b></span>
     <button class="btn primary" onclick="confirmClass()" ${pend?'':'disabled'}>미배정 전체 분반 확정 (${pend})</button>
   </div>
-  <div class="perm-note">급수는 <b>5개 영역 종합 점수(0~100)</b>로 산정됩니다(설정 → 배점·산정규칙·커트라인). 어휘·문법 원점수는 <b>적응형 출제 수준</b>을 정하는 데 쓰입니다. 세부 단계(상/중/하)는 커트라인 구간 내 위치로 배정됩니다.</div>`;
+  <div class="perm-note">급수(종합)는 <b>5개 영역 종합 점수</b>로 산정한 <b>평가 결과</b>이고, <b>배정 반</b>은 그보다 <b>한 단계 위</b>로 권장합니다(그 수준까지는 이미 이해하므로 다음 단계를 학습). 예: 평가 5급 하 → 배정 5급 상반. 어휘·문법 원점수는 적응형 출제 수준 결정용입니다.</div>`;
 }
 function confirmOne(id){ const s=getStudent(id); if(s&&isFullyGraded(s)){ assignClass(s); s.classConfirmed=true; toast('✓ '+s.name+' → '+s.assignedClass+' 배정 완료'); } renderStaff(); }
 function confirmClass(){
