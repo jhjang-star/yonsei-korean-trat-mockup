@@ -245,7 +245,7 @@ function bankPick(area,g,n){
   for(let gg=g; gg>=1; gg--){ const arr=BANK[area]&&BANK[area][gg]; if(arr&&arr.length>=n) return arr.slice(0,n).map(area==='listening'?mapLis:mapRead); }
   const any=BANK[area]&&(BANK[area][g]||BANK[area][1]); return (any||[]).slice(0,n).map(area==='listening'?mapLis:mapRead);
 }
-function bankPrompt(area,g){ const arr=BANK[area]&&(BANK[area][g]||BANK[area][3]||BANK[area][1]); if(!arr||!arr.length) return null; const r=String((typeof DB!=='undefined'&&DB.settings&&DB.settings.round)||1); return arr.find(x=>String(x.round)===r)||arr[0]; }
+function bankPrompt(area,g){ const arr=BANK[area]&&(BANK[area][g]||BANK[area][3]||BANK[area][1]); return (arr&&arr[0])||null; }
 const AREAS = ['vocab','listening','reading','speaking','writing'];
 const AREA_KO = {vocab:'어휘·문법',listening:'듣기',reading:'읽기',speaking:'말하기',writing:'쓰기'};
 
@@ -280,7 +280,6 @@ function defaultSettings(){
     // 8급 체계 (온라인 글로벌 한국어 과정 기준) · 종합 점수 커트라인
     cutlines:{8:90,7:80,6:70,5:60,4:50,3:40,2:25,1:0},
     mode:'fixed',   // 출제 방식: fixed(고정형) | adaptive(적응형·조기종료)
-    round:1,        // 출제 회차 (1~4) — 말하기·쓰기 지시문 선택
   };
 }
 /* 어휘·문법 정답률로 라우팅 등급(1~8) 산출 (적응형 출제 수준) */
@@ -850,7 +849,6 @@ function sbCreate(){
   <div class="grid-2"><div class="card">
     <div class="field"><label>시험명</label><input class="input" value="2026-2 가을학기 배치고사"></div>
     <div class="field"><label>등급 체계</label><div class="seg-btns"><button class="on" onclick="seg(this)">8급 (1하~8상, 24수준)</button><button onclick="seg(this)">간편/심화</button></div><span class="hint">온라인 글로벌 한국어 과정 기준 · 각 급 상/중/하</span></div>
-    <div class="field"><label>출제 회차 <span class="muted small">(문제은행 1~4회차)</span></label><div class="seg-btns">${[1,2,3,4].map(r=>`<button class="${DB.settings.round===r?'on':''}" onclick="setRound(${r})">${r}회차</button>`).join('')}</div><span class="hint">매 응시 랜덤 출제도 가능 · 현재는 선택 회차의 실제 문항으로 출제</span></div>
   </div><div class="card">
     <div class="field"><label>평가 영역</label>
     <div style="display:flex;flex-direction:column;gap:8px">
@@ -1080,7 +1078,6 @@ function setWeight(a,v){ DB.settings.weights[a]=parseInt(v)||0; DB.students.forE
 function setCut(g,v){ DB.settings.cutlines[g]=parseInt(v)||0; renderStaff(); }
 function setRule(r){ DB.settings.rule=r; renderStaff(); }
 function setMode(m){ DB.settings.mode=m; toast(m==='adaptive'?'적응형(조기종료)으로 전환 · 어휘 결과 등급의 문항 출제':'고정형으로 전환 · 전 응시자 동일 문항'); renderStaff(); }
-function setRound(r){ DB.settings.round=r; toast('출제 회차 → '+r+'회차'); renderStaff(); }
 
 /* =========================================================
    7) 공통 UI
