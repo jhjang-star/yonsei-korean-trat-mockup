@@ -290,11 +290,11 @@ function defaultSettings(){
   return {
     weights:{vocab:20,listening:20,reading:20,speaking:20,writing:20},
     rule:'sum',
-    // 6급 체계 · TOPIK 환산 (온라인글로벌한국어능력시험 공식 기준)
-    cutlines:{6:85,5:70,4:55,3:40,2:25,1:0},
+    // 8급 체계 (온라인 글로벌 한국어 과정 기준) · 종합 점수 커트라인
+    cutlines:{8:90,7:80,6:70,5:60,4:50,3:40,2:25,1:0},
   };
 }
-const GRADES=[1,2,3,4,5,6];
+const GRADES=[1,2,3,4,5,6,7,8];
 function newStudent(id,name,username){
   return {id,name,username,joined:true,
     progress:'not_started',
@@ -400,15 +400,15 @@ function gradeFromTotal(total){
   return 1;
 }
 /* ---------------------------------------------------------
-   종합 급수 산정 (온라인글로벌한국어능력시험 6급 체계):
-   - 5개 영역 종합 점수(0~100) → TOPIK 환산 커트라인 → 1~6급
+   종합 급수 산정 (온라인 글로벌 한국어 과정 8급 체계):
+   - 5개 영역 종합 점수(0~100) → 커트라인 → 1~8급
    - 각 급을 성취 수준에 따라 상/중/하로 판정 (공식: 상 80%↑ · 중 60~80% · 하 20~60%)
    - 어휘·문법 결과는 이후 영역의 '적응형 출제 수준'(자기 등급 ±1)을 결정
    --------------------------------------------------------- */
-const SUBLEVELS={1:['하','중','상'],2:['하','중','상'],3:['하','중','상'],4:['하','중','상'],5:['하','중','상'],6:['하','중','상']};
+const SUBLEVELS={1:['하','중','상'],2:['하','중','상'],3:['하','중','상'],4:['하','중','상'],5:['하','중','상'],6:['하','중','상'],7:['하','중','상'],8:['하','중','상']};
 function subOf100(t){
   const g=gradeFromTotal(t); if(g==null) return null;
-  const cl=DB.settings.cutlines; const lo=cl[g], hi=(g<6?cl[g+1]:101);
+  const cl=DB.settings.cutlines; const lo=cl[g], hi=(g<8?cl[g+1]:101);
   const span=Math.max(1,hi-lo); const frac=Math.max(0,Math.min(0.999,(t-lo)/span));
   // 공식 기준: 상 80%↑ · 중 60~80% · 하 <60%
   return frac>=0.8?'상': frac>=0.6?'중':'하';
@@ -424,11 +424,11 @@ function areaGradeLabel(stu,area){
   const gi=gradeInfo(Math.round(sc/DB.settings.weights[area]*100)); return gi?gi.label:null;
 }
 /* 권장 반 = 평가 급수보다 한 단계 위 (이미 그 수준을 이해하므로 다음 단계를 배움)
-   같은 급수 내 다음 세부단계 → 최상위면 다음 급수 하 → 6급 상은 유지 */
+   같은 급수 내 다음 세부단계 → 최상위면 다음 급수 하 → 8급 상은 유지 */
 function nextClassLevel(g,sub){
   const arr=SUBLEVELS[g]; const i=arr.indexOf(sub);
   if(i>=0 && i<arr.length-1) return {g, sub:arr[i+1]};
-  if(g<6) return {g:g+1, sub:SUBLEVELS[g+1][0]};
+  if(g<8) return {g:g+1, sub:SUBLEVELS[g+1][0]};
   return {g, sub};
 }
 function classFor(stu){ const p=placement(stu); if(!p) return null; const n=nextClassLevel(p.g,p.sub); return {g:n.g, sub:n.sub, label:n.g+'급 '+n.sub}; }
@@ -460,7 +460,7 @@ function updateHint(){
   } else if(session.sub==='instructor'){
     h.innerHTML='🖥️ <b>강사</b> · 제출된 말하기·쓰기가 <b>채점 목록</b>에 실제로 뜹니다. 루브릭 점수를 입력·확정하면 관리자 분반에 반영돼요. (관리자 전용 기능은 🔒)';
   } else {
-    h.innerHTML='🖥️ <b>관리자</b> · 급수(1~6급×상/중/하)는 <b>5개 영역 종합 점수</b>로 산정됩니다(설정 → 배점·커트라인, TOPIK 환산). 채점 완료 학생을 <b>분반 결과</b>에서 확정하면 반이 자동 배정됩니다.';
+    h.innerHTML='🖥️ <b>관리자</b> · 급수(1~8급×상/중/하)는 <b>5개 영역 종합 점수</b>로 산정됩니다(설정 → 배점·커트라인). 채점 완료 학생을 <b>분반 결과</b>에서 확정하면 반이 자동 배정됩니다.';
   }
 }
 
@@ -485,9 +485,9 @@ function renderFlow(){
     ${arr}
     ${node('학생','f-student','④ 어휘·문법 평가 (선행)','5개 영역 중 가장 먼저 응시')}
     ${arr}
-    ${node('시스템','f-system','⑤ 수준 자동 판정 (적응형)','어휘·문법 정답률 → 등급(1하~6상) 판정 → 듣기·읽기 자기등급 ±1 수준 6문항, 쓰기·말하기 과제 자동 할당 · 학생 비노출')}
+    ${node('시스템','f-system','⑤ 수준 자동 판정 (적응형)','어휘·문법 정답률 → 등급(1하~8상) 판정 → 듣기·읽기 자기등급 ±1 수준 6문항, 쓰기·말하기 과제 자동 할당 · 학생 비노출')}
     ${arr}
-    ${node('학생','f-student','⑥ 듣기·읽기 → 말하기(녹음)·쓰기(사진 OCR)','임시저장·이어하기 지원 → 제출 확인 모달 → 제출')}
+    ${node('학생','f-student','⑥ 듣기·읽기 → 쓰기(사진 OCR)·말하기(녹음)','공식 순서: 어휘문법 → 듣기 → 읽기 → 쓰기 → 말하기 · 이전 문항 복귀 불가 → 제출')}
     ${arr}
     <div class="fsplit">— 채점 분기 —</div>
     <div class="fbranch">
@@ -503,7 +503,7 @@ function renderFlow(){
       </div>
     </div>
     ${arr}
-    ${node('관리자','f-admin','⑦ 5개 영역 종합 → 급수 산정 · 분반','5영역 종합 점수 → TOPIK 환산 커트라인 → 1~6급 + 세부단계(상/중/하) → 배정 반(한 단계 위) 확정 · 엑셀 내보내기')}
+    ${node('관리자','f-admin','⑦ 5개 영역 종합 → 급수 산정 · 분반','5영역 종합 점수 → 커트라인 → 1~8급 + 세부단계(상/중/하) → 배정 반(한 단계 위) 확정 · 엑셀 내보내기')}
     ${arr}
     ${node('학생','f-student','⑧ 최종 결과 · 반 안내','종합 급수·배정 반·레이더 차트·AI 개인화 피드백 확인')}
     <div class="perm-note" style="margin-top:20px">💡 실제 서비스 도식(원본 이미지)이 있으면 이 자리에 그대로 넣어 드릴 수 있어요.</div>
@@ -561,14 +561,14 @@ function stuIntro(){
     <div class="pcard" style="padding:11px 13px">1️⃣ 어휘·문법 <span class="muted small" style="float:right">최대 60문항 · 50분</span></div>
     <div class="pcard" style="padding:11px 13px">2️⃣ 듣기 <span class="muted small" style="float:right">6문항 · 10분</span></div>
     <div class="pcard" style="padding:11px 13px">3️⃣ 읽기 <span class="muted small" style="float:right">6문항 · 10분</span></div>
-    <div class="pcard" style="padding:11px 13px">4️⃣ 말하기 <span class="muted small" style="float:right">3~4문항 · 20분</span></div>
-    <div class="pcard" style="padding:11px 13px">5️⃣ 쓰기 <span class="muted small" style="float:right">1~2문항 · 40분</span></div>
+    <div class="pcard" style="padding:11px 13px">4️⃣ 쓰기 <span class="muted small" style="float:right">1~2문항 · 40분</span></div>
+    <div class="pcard" style="padding:11px 13px">5️⃣ 말하기 <span class="muted small" style="float:right">3~4문항 · 20분</span></div>
   </div>
   <div class="info-banner mt2">ℹ️ 어휘·문법 결과로 이후 영역의 출제 수준(자기 등급 ±1)이 자동 결정됩니다. 답을 고르면 다음 문항으로 넘어가며 <b>이전 문항으로 돌아갈 수 없습니다.</b></div>
   <div class="lock-banner mt">🔒 <b>온라인 감독</b> 안내 · 웹캠·화면·마이크로 응시 과정이 기록되며, AI가 얼굴 인증과 이상행동(시선·소리)을 탐지해 부정행위를 방지합니다.</div>
   <button class="btn primary lg mt2" onclick="startExam()">시작하기</button>`;
 }
-const STEP_ORDER=['vocab','listening','reading','speaking','writing'];
+const STEP_ORDER=['vocab','listening','reading','writing','speaking'];
 function stepLabel(step){
   const idx=STEP_ORDER.indexOf(step);
   return STEP_ORDER.map((a,i)=>`<div class="st ${i<idx?'done':i===idx?'on':''}">${AREA_KO[a].replace('·','')}</div>`).join('');
@@ -610,8 +610,8 @@ function stuSpeaking(){
     <p class="small muted mt">${session.recording?'녹음 중… 눌러서 정지':(hasRec?'녹음 완료 ('+fmt(r.sec)+') · 다시 하려면 ●':'● 를 눌러 녹음을 시작하세요')}</p>
     ${hasRec?`<div class="wave mt" style="height:26px">${[50,80,40,100,60,30,75,45,90,55,35,70].map(h=>'<i style="height:'+h+'%"></i>').join('')}</div>`:''}
   </div>
-  <div class="info-banner mt2">🎙️ 녹음 파일만 저장됩니다. 채점은 교수자가 녹음을 <b>직접 듣고</b> 진행합니다.</div>
-  <button class="btn primary lg mt2" onclick="saveSpeaking()" ${hasRec?'':'disabled'}>녹음 저장하고 다음 →</button>`;
+  <div class="info-banner mt2">🎙️ 녹음 파일만 저장됩니다. 채점은 교수자가 녹음을 <b>직접 듣고</b> 진행합니다. (마지막 영역)</div>
+  <button class="btn primary lg mt2" onclick="submitExam()" ${hasRec?'':'disabled'}>녹음 저장하고 제출 →</button>`;
 }
 function stuWriting(){
   const r=session.draft.writing;
@@ -622,7 +622,7 @@ function stuWriting(){
     return head + `
     <div class="dropzone" onclick="uploadPhoto()"><div class="big">📷</div><b>답안지 사진 촬영</b><div class="small mt">손글씨 답안을 촬영하면 자동으로 글자를 인식(OCR)합니다</div></div>
     <button class="btn ghost block mt" onclick="uploadPhoto()">📁 갤러리에서 선택</button>
-    <div class="info-banner mt2">✍️ 종이에 손으로 쓴 답안을 사진으로 올리면 OCR이 텍스트로 변환합니다. 변환 결과를 확인·수정한 뒤 제출하세요.</div>`;
+    <div class="info-banner mt2">✍️ 종이에 손으로 쓴 답안을 사진으로 올리면 OCR이 텍스트로 변환합니다. 변환 결과를 확인·수정한 뒤 다음(말하기)으로 넘어갑니다.</div>`;
   }
   return head + `
   <div class="pcard" style="padding:11px;display:flex;gap:11px;align-items:center">
@@ -636,7 +636,12 @@ function stuWriting(){
     <textarea class="input" id="wr_text" style="min-height:120px">${r.text}</textarea>
     <span class="hint"><span id="wr_count">${r.text.length}</span>자 · 인식 오류가 없는지 확인하세요</span></div>
   <label class="chk-inline"><input type="checkbox" id="wr_ok"> OCR 인식 결과를 확인했습니다</label>
-  <button class="btn primary lg mt" onclick="submitExam()">확인했어요 · 제출하기</button>`;
+  <button class="btn primary lg mt" onclick="goSpeakingFromWriting()">확인했어요 · 말하기로 →</button>`;
+}
+function goSpeakingFromWriting(){
+  const el=document.getElementById('wr_text'); if(el) session.draft.writing.text=(el.value||'').trim();
+  const ok=document.getElementById('wr_ok'); if(ok && !ok.checked){ toast('OCR 인식 결과를 확인해 주세요'); return; }
+  go('speaking');
 }
 function uploadPhoto(){ session.draft.writing.photo=true; if(!session.draft.writing.text) session.draft.writing.text=OCR_TEXT; render(); toast('📷 사진 업로드 · OCR 인식 완료'); }
 function retakePhoto(){ const el=document.getElementById('wr_text'); if(el) session.draft.writing.text=el.value; session.draft.writing.photo=false; render(); }
@@ -731,15 +736,9 @@ function toggleRec(){
     render();
   }
 }
-function saveSpeaking(){
-  if(session.recording) toggleRec();
-  if(!(session.draft.speaking.sec>0)){ toast('먼저 녹음해 주세요'); return; }
-  go('writing');
-}
 function submitExam(){
-  const el=document.getElementById('wr_text'); if(el) session.draft.writing.text=(el.value||'').trim();
-  const ok=document.getElementById('wr_ok');
-  if(ok && !ok.checked){ toast('OCR 인식 결과를 확인해 주세요'); return; }
+  if(session.recording) toggleRec();
+  if(!(session.draft.speaking.sec>0)){ toast('먼저 말하기 녹음을 해주세요'); return; }
   openModal({ic:'📝',title:'정말 제출하시겠습니까?',body:'제출 후에는 답안을 수정할 수 없습니다. 말하기·쓰기는 채점 후 결과가 공개됩니다.',yes:'네, 제출합니다',onYes:()=>{
     const me=getStudent(session.me);
     me.answers={vocab:session.draft.vocab,listening:session.draft.listening,reading:session.draft.reading};
@@ -835,7 +834,7 @@ function sbCreate(){
   return `<div class="page-head"><div><h1>시험 생성</h1><div class="sub">새 배치고사를 만들고 평가 영역을 구성합니다</div></div></div>
   <div class="grid-2"><div class="card">
     <div class="field"><label>시험명</label><input class="input" value="2026-2 가을학기 배치고사"></div>
-    <div class="field"><label>등급 체계</label><div class="seg-btns"><button class="on" onclick="seg(this)">6급 (1하~6상, 18수준)</button><button onclick="seg(this)">간편/심화</button></div><span class="hint">온라인글로벌한국어능력시험 공식 체계 · 각 급 상/중/하</span></div>
+    <div class="field"><label>등급 체계</label><div class="seg-btns"><button class="on" onclick="seg(this)">8급 (1하~8상, 24수준)</button><button onclick="seg(this)">간편/심화</button></div><span class="hint">온라인 글로벌 한국어 과정 기준 · 각 급 상/중/하</span></div>
   </div><div class="card">
     <div class="field"><label>평가 영역</label>
     <div style="display:flex;flex-direction:column;gap:8px">
@@ -1027,8 +1026,7 @@ function exportCSV(){ toast('📤 데모: 분반 결과 CSV 내보내기'); }
 function sbSettings(){
   const w=DB.settings.weights; const sum=AREAS.reduce((x,a)=>x+w[a],0);
   const cl=DB.settings.cutlines;
-  const TOPIK={6:'85~100',5:'70~84',4:'55~69',3:'40~54',2:'25~39',1:'10~24'};
-  return `<div class="page-head"><div><h1>급수 산정 설정</h1><div class="sub">종합 급수 = 5개 영역 종합 점수 (6급 체계) · 어휘·문법 = 적응형 출제 수준</div></div></div>
+  return `<div class="page-head"><div><h1>급수 산정 설정</h1><div class="sub">종합 급수 = 5개 영역 종합 점수 (8급 체계 · 온라인 글로벌 한국어 과정) · 어휘·문법 = 적응형 출제 수준</div></div></div>
   <div class="grid-2">
     <div class="card"><h3 style="font-size:14px">① 영역별 배점 <span class="muted small">(종합 점수 기준, 합계 ${sum})</span></h3>
       <div class="tbl-wrap mt" style="box-shadow:none"><table style="min-width:auto"><thead><tr><th>영역</th><th>배점</th></tr></thead><tbody>
@@ -1039,16 +1037,16 @@ function sbSettings(){
         <button class="${DB.settings.rule==='min'?'on':''}" onclick="setRule('min')">최저영역</button></div>
         <span class="hint">합산=5영역 배점 합계, 최저영역=가장 낮은 영역 기준</span></div>
     </div>
-    <div class="card"><h3 style="font-size:14px">② 급수 커트라인 <span class="muted small">(종합 점수 최소값 · TOPIK 환산)</span></h3>
-      <div class="tbl-wrap mt" style="box-shadow:none"><table style="min-width:auto"><thead><tr><th>급수</th><th>최소 종합점수</th><th>TOPIK % 구간</th></tr></thead><tbody>
-      ${[6,5,4,3,2,1].map(g=>`<tr><td><span class="grade-badge sm">${g}급</span></td><td><input class="input" style="width:70px" type="number" value="${cl[g]}" onchange="setCut(${g},this.value)"></td><td class="mono muted small">${TOPIK[g]}</td></tr>`).join('')}
+    <div class="card"><h3 style="font-size:14px">② 급수 커트라인 <span class="muted small">(종합 점수 0~100 최소값)</span></h3>
+      <div class="tbl-wrap mt" style="box-shadow:none"><table style="min-width:auto"><thead><tr><th>급수</th><th>최소 종합점수</th></tr></thead><tbody>
+      ${[8,7,6,5,4,3,2,1].map(g=>`<tr><td><span class="grade-badge sm">${g}급</span></td><td><input class="input" style="width:70px" type="number" value="${cl[g]}" onchange="setCut(${g},this.value)"></td></tr>`).join('')}
       </tbody></table></div>
       <div class="perm-note">세부 단계(상/중/하)는 각 급 구간 내 성취율로 자동 배정 — <b>상 80%↑ · 중 60~80% · 하 &lt;60%</b> (공식 기준).</div>
       <button class="btn primary block mt2" onclick="toast('✓ 설정 저장됨 · 분반 계산에 즉시 반영')">저장</button>
     </div>
   </div>
   <div class="card mt2"><h3 style="font-size:14px">참고: 적응형 출제 원리 <span class="muted small">· 온라인글로벌한국어능력시험(IBT/CBT)</span></h3>
-    <p class="small muted mt" style="line-height:1.7">① 어휘·문법 <b>최대 60문항</b>을 먼저 응시 → 자동 채점으로 <b>등급(1하~6상)</b> 판정.<br>② 그 등급 기준 <b>자기 등급 ±1 수준</b>의 듣기·읽기 문항이 각 6문항씩 제공되고, 쓰기·말하기도 등급에 맞는 과제가 자동 할당.<br>③ 객관식에서 <b>정답률 50%를 처음 못 넘긴 등급으로 확정</b>되고 다음 등급 문항엔 도전하지 않음.</p>
+    <p class="small muted mt" style="line-height:1.7">① 어휘·문법 <b>최대 60문항</b>을 먼저 응시 → 자동 채점으로 <b>등급(1급~8급, 상/중/하)</b> 판정.<br>② 그 등급 기준 <b>자기 등급 ±1 수준</b>의 듣기·읽기 문항이 각 6문항씩 제공되고, 쓰기·말하기도 등급에 맞는 과제가 자동 할당.<br>③ 객관식에서 <b>정답률 50%를 처음 못 넘긴 등급으로 확정</b>되고 다음 등급 문항엔 도전하지 않음.</p>
     <div class="grid-2 mt"><div>
       <div class="field"><label>어휘·문법 정답률(%) → 출제 수준</label><input class="input" type="number" min="0" max="100" id="simScore" value="72" oninput="simPlace()"></div>
       <div class="pcard" style="text-align:center;background:var(--admin-bg);border-color:#ddd0f5"><div class="small muted">판정 등급</div><div id="simOut" style="font-size:20px;font-weight:900;color:var(--admin);margin-top:4px">${(gradeInfo(72)||{}).label||'—'}</div></div>
