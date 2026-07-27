@@ -913,23 +913,25 @@ function sbLive(){
   <div class="tbl-wrap mt2"><table><thead><tr><th>학생</th><th>현재 영역</th><th>진행률</th><th>상태</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function sbGradelist(){
+  const showAI = session.sub==='admin';   // 강사는 AI 비공개
   const queue=DB.students.filter(s=>s.progress==='submitted');
   const rows=queue.map(s=>{
     const done=isFullyGraded(s);
     const aiSp=s.ai?(sumArr(s.ai.speaking.scores)+'/'+rubricMax('speaking')):'—';
     return `<tr><td><b>${s.name}</b></td>
       <td>말하기·쓰기</td>
-      <td class="mono">말 ${aiSp}</td>
+      ${showAI?`<td class="mono">말 ${aiSp}</td>`:''}
       <td>${done?'<span class="pill ok">완료</span>':'<span class="pill warn">대기</span>'}</td>
       <td><button class="btn ${done?'ghost':'primary'} sm" onclick="openGrade('${s.id}')">${done?'보기':'채점'}</button></td></tr>`;
   }).join('');
   const pending=queue.filter(s=>needsGrading(s)).length;
-  return `<div class="page-head"><div><h1>채점 목록</h1><div class="sub">말하기·쓰기 인간 채점 · AI 가채점 완료</div></div></div>
+  const cols = showAI?5:4;
+  return `<div class="page-head"><div><h1>채점 목록</h1><div class="sub">말하기·쓰기 인간 채점${showAI?' · AI 가채점 완료':''}</div></div></div>
   <div class="summary"><div class="stat"><div class="lbl">채점 대기</div><div class="num mono" style="color:var(--warn)">${pending}</div></div>
   <div class="stat"><div class="lbl">채점 완료</div><div class="num mono" style="color:var(--ok)">${queue.length-pending}</div></div>
-  <div class="stat"><div class="lbl">AI–인간 차이 큼</div><div class="num mono" style="color:var(--danger)">${DB.students.filter(bigDiff).length}</div></div>
+  ${showAI?`<div class="stat"><div class="lbl">AI–인간 차이 큼</div><div class="num mono" style="color:var(--danger)">${DB.students.filter(bigDiff).length}</div></div>`:`<div class="stat"><div class="lbl">내 담당</div><div class="num mono">${queue.length}</div></div>`}
   <div class="stat"><div class="lbl">제출 학생</div><div class="num mono">${queue.length}</div></div></div>
-  <div class="tbl-wrap mt2"><table><thead><tr><th>학생</th><th>영역</th><th>AI 가채점</th><th>상태</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="5" class="muted center" style="padding:24px">제출한 학생이 없습니다. 학생 탭에서 응시를 완료해 보세요.</td></tr>'}</tbody></table></div>`;
+  <div class="tbl-wrap mt2"><table><thead><tr><th>학생</th><th>영역</th>${showAI?'<th>AI 가채점</th>':''}<th>상태</th><th></th></tr></thead><tbody>${rows||`<tr><td colspan="${cols}" class="muted center" style="padding:24px">제출한 학생이 없습니다. 학생 탭에서 응시를 완료해 보세요.</td></tr>`}</tbody></table></div>`;
 }
 function openGrade(id){ session.gradeSel=id; session.gradeTab='speaking'; window.staffApp='grade'; renderStaff(); }
 function sbGrade(isAdmin){
@@ -946,7 +948,8 @@ function sbGrade(isAdmin){
   const cats=RUBRIC[tab];
   const ai=stu.ai[tab].scores;
   const human=stu.human[tab];
-  const cur=human?human.scores:ai.slice();
+  const showAI=isAdmin;   // 강사는 AI 채점·차이 비공개 (관리자만 열람)
+  const cur=human?human.scores:(showAI?ai.slice():ai.map(()=>0));
   const aiSum=sumArr(ai), humanSum=sumArr(cur), maxS=rubricMax(tab);
   const diff=Math.abs(humanSum-aiSum);
   const respBlock = isSpeak
@@ -954,7 +957,7 @@ function sbGrade(isAdmin){
        <div class="passage"><b class="small" style="color:var(--system)">🎧 녹음 응답</b><br>녹음 시간 ${fmt(resp.sec||0)} · 재생하여 평가하세요. (음성 파일 기반 채점)</div>`
     : `<div class="passage"><b class="small" style="color:var(--system)">📄 OCR 변환 텍스트 (학생 확인 완료)</b><br>${resp.text||'(작성 없음)'}</div>`;
   const rubricTitle = `${cats.map(c=>c.k).join(' + ')} · 각 3점 = ${maxS}점`;
-  return `<div class="page-head"><div><h1>채점 · 루브릭 + AI</h1><div class="sub">말하기·쓰기 인간 채점 · AI 가채점 비교 (공식 채점 구인, 3점 척도)</div></div></div>
+  return `<div class="page-head"><div><h1>채점 · 루브릭${showAI?' + AI':''}</h1><div class="sub">말하기·쓰기 인간 채점 (공식 채점 구인, 3점 척도)${showAI?' · AI 가채점 비교':''}</div></div></div>
   <div class="tabs"><button class="${isSpeak?'on':''}" onclick="setGradeTab('speaking')">🎙 말하기</button><button class="${!isSpeak?'on':''}" onclick="setGradeTab('writing')">✍ 쓰기</button></div>
   <div class="grade-grid">
     <div><p class="small muted" style="font-weight:700;margin-bottom:8px">채점 대상 (${queue.length})</p><div class="stu-list">${list}</div></div>
@@ -962,13 +965,16 @@ function sbGrade(isAdmin){
       <div class="row-between"><b>${stu.name} · ${AREA_KO[tab]} 응답</b><span><span class="pill system no">출제수준: ${stu.level||'—'}</span></span></div>
       <div class="mt">${respBlock}</div>
       <p class="small muted" style="font-weight:700;margin:12px 0 6px">루브릭 (${rubricTitle})</p>
-      ${cats.map((c,idx)=>`<div class="rubric-item"><div class="ri-h"><span>${c.k} <span class="muted small" style="font-weight:400">· ${c.d}</span></span><span class="ai-score">AI ${ai[idx]} / 3</span></div>
+      ${cats.map((c,idx)=>`<div class="rubric-item"><div class="ri-h"><span>${c.k} <span class="muted small" style="font-weight:400">· ${c.d}</span></span>${showAI?`<span class="ai-score">AI ${ai[idx]} / 3</span>`:''}</div>
         <div class="score-input"><span class="small muted">강사 점수</span><input class="input" type="number" min="0" max="3" id="rub_${idx}" value="${cur[idx]}"><span class="muted">/ 3</span></div></div>`).join('')}
     </div></div>
     <div>
-      <div class="grid-2" style="gap:10px"><div class="vs-box"><div class="vs-lbl">AI 가채점</div><div class="vs-num" style="color:var(--admin)">${aiSum}<span style="font-size:14px;color:var(--muted)">/${maxS}</span></div></div>
+      ${showAI
+        ? `<div class="grid-2" style="gap:10px"><div class="vs-box"><div class="vs-lbl">AI 가채점</div><div class="vs-num" style="color:var(--admin)">${aiSum}<span style="font-size:14px;color:var(--muted)">/${maxS}</span></div></div>
       <div class="vs-box"><div class="vs-lbl">교수자 확정</div><div class="vs-num">${human?humanSum:'—'}${human?`<span style="font-size:14px;color:var(--muted)">/${maxS}</span>`:''}</div></div></div>
-      <div class="discrepancy ${diff>=3?'big':'okd'}">${human?('차이 '+diff+(diff>=3?' · 검토 권장':' · 허용 범위 ✓')):'점수 입력 후 확정하세요'}</div>
+      <div class="discrepancy ${diff>=3?'big':'okd'}">${human?('차이 '+diff+(diff>=3?' · 검토 권장':' · 허용 범위 ✓')):'점수 입력 후 확정하세요'}</div>`
+        : `<div class="vs-box"><div class="vs-lbl">교수자 확정</div><div class="vs-num">${human?humanSum:'—'}${human?`<span style="font-size:14px;color:var(--muted)">/${maxS}</span>`:''}</div></div>
+      <div class="perm-note" style="margin-top:12px">🔒 AI 가채점·차이 비교는 <b>관리자</b>만 열람합니다. 강사는 루브릭 점수만 입력·확정하세요.</div>`}
       <button class="btn primary block mt2" onclick="confirmGrade('${stu.id}')">${human&&human.confirmed?'재확정':'점수 확정'}</button>
       <div class="perm-note">말하기·쓰기까지 확정되면 <b>5영역 종합</b>으로 급수 산정 → 현재 종합 배치: <b>${p?p.label:'채점 후 산정'}</b></div>
       <div class="perm-note">${isAdmin?'관리자: AI↔인간 전체 검증 열람 가능':'강사: 담당 채점만 · 점수 입력만 가능'}</div>
