@@ -356,19 +356,28 @@ function computeAuto(stu){
   stu.vocabPct = Math.round(vc.correct/vc.total*100);
   const gi=gradeInfo(stu.vocabPct); stu.level = gi?gi.label:'—';  // 적응형 출제 수준(급)
 }
-/* 상세 루브릭 (공식 채점 구인, 3점 척도) — 말하기 4범주, 쓰기 3범주.
-   g: [상(3), 중(2), 하(1), 0] 세부 채점 지침. 공식 평가 영역(문법적·담화적·사회언어학적 능력) 근거 */
+/* 상세 루브릭 (연세대 공식 채점 구인, 3점 척도) — 출제구성표 채점기준표 근거.
+   말하기: 8개 세부 구인 × 3점 = 24점/문항 · 쓰기: 7개 세부 구인 × 3점 = 21점/문항.
+   cat=대범주, k=세부 구인, g=[상(3), 중(2), 하(1), 0] 세부 채점 지침 */
 const RUBRIC={
   speaking:[
-    {k:'내용',d:'적합성·풍부성',g:['주제에 맞게 세 과제(예: 소개·이유·경험)를 모두 충실히 수행하고 내용이 풍부함','주제에 맞으나 세 과제 중 하나가 빠지거나 내용이 다소 빈약함','주제와 부분적으로만 관련되고 두 과제 이상이 빠짐','주제에서 벗어나거나 발화가 너무 짧아 평가 불가']},
-    {k:'조직',d:'체계성·응집성',g:['도입–전개–마무리가 분명하고 담화 표지·연결어로 응집성 있게 조직됨','전체 흐름은 파악되나 일부 연결이 어색하거나 구성이 단조로움','문장이 나열식이고 논리적 연결이 약해 흐름 파악이 어려움','조직을 판단할 만한 발화가 없음']},
-    {k:'표현',d:'정확성·다양성',g:['어휘·문법이 대체로 정확하고 수준에 맞는 다양한 표현을 사용함','오류가 일부 있으나 의미 전달에 큰 지장이 없고 표현이 다소 단조로움','기초적 오류가 잦아 의미 전달에 지장이 있음','표현을 평가할 만한 발화가 없음']},
-    {k:'전달',d:'발음·억양·속도',g:['발음·억양이 자연스럽고 적절한 속도로 막힘 없이 전달함','부분적으로 부자연스러우나 알아듣는 데 큰 무리가 없음','발음·억양 오류나 잦은 머뭇거림으로 이해에 노력이 필요함','발화량이 부족해 전달을 평가할 수 없음']},
+    {cat:'내용',k:'적절성',g:['질문·주제에 정확히 부합하는 내용으로 응답함','대체로 부합하나 내용 일부가 주제에서 벗어남','주제와 부분적으로만 관련됨','주제에서 벗어나거나 발화가 너무 짧아 평가 불가']},
+    {cat:'내용',k:'풍부성',g:['근거·예시를 들어 내용을 충분히 확장함','기본 내용은 있으나 확장·구체화가 부족함','내용이 매우 단편적임','발화량이 부족해 평가 불가']},
+    {cat:'조직',k:'체계성',g:['도입–전개–마무리 구조가 분명함','구조는 있으나 일부 단계가 약함','구조 없이 즉흥적으로 나열함','조직을 판단할 발화가 없음']},
+    {cat:'조직',k:'응집성',g:['담화 표지·연결어로 자연스럽게 연결함','연결이 일부 어색함','문장 간 연결이 거의 없음','평가할 발화가 없음']},
+    {cat:'표현',k:'정확성',g:['어휘·문법 오류가 거의 없음','오류가 일부 있으나 의미 전달에 무리 없음','기초적 오류가 잦아 의미 전달에 지장이 있음','평가할 발화가 없음']},
+    {cat:'표현',k:'다양성',g:['수준에 맞는 다양한 어휘·문형을 사용함','제한된 표현을 반복적으로 사용함','매우 단조로운 기초 표현만 사용함','평가할 발화가 없음']},
+    {cat:'전달',k:'발음·억양',g:['발음·억양이 자연스러워 이해가 쉬움','부분적으로 부자연스러우나 이해 가능함','오류가 잦아 이해에 노력이 필요함','평가할 발화가 없음']},
+    {cat:'전달',k:'속도',g:['적절한 속도로 막힘 없이 발화함','간헐적으로 머뭇거림','잦은 멈춤으로 발화 흐름이 끊김','발화량이 부족해 평가 불가']},
   ],
   writing:[
-    {k:'내용',d:'적합성·풍부성',g:['주제·과제 요구를 모두 충족하고 요구 글자 수를 채우며 내용이 충실함','주제에 맞으나 일부 요구가 빠지거나 분량이 다소 부족함','주제와 부분적으로만 관련되고 분량이 크게 부족함','주제에서 벗어나거나 미완성이라 평가 불가']},
-    {k:'조직',d:'체계성·응집성',g:['문단 구분과 서론–본론–결론이 명확하고 접속·지시 표현으로 응집성 있음','전체 구성은 있으나 문단 구분·연결이 부분적으로 미흡함','문장 나열에 그쳐 문단·흐름 구성이 약함','구성을 판단할 분량이 없음']},
-    {k:'표현',d:'정확성·다양성·적절성',g:['맞춤법·문법이 대체로 정확하고 수준에 맞는 다양·적절한 표현을 사용함','오류가 일부 있으나 의미 전달에 지장이 적고 표현이 다소 단조로움','맞춤법·문법 오류가 잦아 의미 전달에 지장이 있음','표현을 평가할 분량이 없음']},
+    {cat:'내용',k:'적합성',g:['주제·과제 요구에 정확히 부합함','대체로 부합하나 일부 요구가 누락됨','주제와 부분적으로만 관련됨','주제 이탈·미완성이라 평가 불가']},
+    {cat:'내용',k:'풍부성',g:['근거·예시로 충분히 전개하고 요구 글자 수를 채움','전개가 다소 부족하거나 분량이 약간 부족함','내용이 단편적이고 분량이 크게 부족함','평가할 분량이 없음']},
+    {cat:'조직',k:'체계성',g:['서론–본론–결론과 문단 구분이 명확함','구성은 있으나 일부 문단 구분이 미흡함','문단 구분 없이 나열함','구성을 판단할 분량이 없음']},
+    {cat:'조직',k:'응집성',g:['접속·지시 표현으로 문장·문단이 긴밀히 연결됨','연결이 부분적으로 어색함','연결 장치가 거의 없음','평가할 분량이 없음']},
+    {cat:'표현',k:'정확성',g:['맞춤법·문법 오류가 거의 없음','오류가 일부 있으나 의미 전달에 무리 없음','오류가 잦아 의미 전달에 지장이 있음','평가할 분량이 없음']},
+    {cat:'표현',k:'다양성',g:['수준에 맞는 다양한 어휘·문형을 사용함','제한된 표현을 반복적으로 사용함','단조로운 기초 표현만 사용함','평가할 분량이 없음']},
+    {cat:'표현',k:'적절성',g:['문어체·격식 등 상황에 맞는 표현을 사용함','일부 부적절한 구어체를 혼용함','상황에 맞지 않는 표현이 잦음','평가할 분량이 없음']},
   ],
 };
 function rubricMax(area){ return RUBRIC[area].length*3; }
@@ -377,9 +386,11 @@ function computeAI(stu){
   const sSec=(stu.responses.speaking.sec||0), wLen=(stu.responses.writing.text||'').length;
   const sb=Math.max(0,Math.min(3, 1+Math.floor(sSec/22)));
   const wb=Math.max(0,Math.min(3, 1+Math.floor(wLen/140)));
+  // 구인별로 기준선(sb/wb) 대비 ±1 변주를 주어 현실적인 가채점 분포 생성
+  const vary=(base,i)=>Math.max(0,Math.min(3, base + (i%3===0?0:(i%3===1?-1:1)) ));
   stu.ai={
-    speaking:{scores:RUBRIC.speaking.map((c,i)=>Math.max(0,Math.min(3, sb-(i===3?1:0))))},
-    writing:{scores:RUBRIC.writing.map((c,i)=>Math.max(0,Math.min(3, wb-(i===2?1:0))))},
+    speaking:{scores:RUBRIC.speaking.map((c,i)=>vary(sb,i))},
+    writing:{scores:RUBRIC.writing.map((c,i)=>vary(wb,i))},
   };
 }
 function gradeHumanFor(stu){
@@ -990,7 +1001,8 @@ function sbGrade(isAdmin){
     ? `<div class="player"><button class="play" onclick="toast('▶ 녹음 재생 (데모)')">▶</button><div class="wave">${[50,90,40,100,60,30,80,55,70,35].map(h=>'<i style="height:'+h+'%"></i>').join('')}</div><span class="small mono muted">${fmt(resp.sec||0)}</span></div>
        <div class="passage"><b class="small" style="color:var(--system)">🎧 녹음 응답</b><br>녹음 시간 ${fmt(resp.sec||0)} · 재생하여 평가하세요. (음성 파일 기반 채점)</div>`
     : `<div class="passage"><b class="small" style="color:var(--system)">📄 OCR 변환 텍스트 (학생 확인 완료)</b><br>${resp.text||'(작성 없음)'}</div>`;
-  const rubricTitle = `${cats.map(c=>c.k).join(' + ')} · 각 3점 = ${maxS}점`;
+  const uniqCats=[...new Set(cats.map(c=>c.cat))];
+  const rubricTitle = `${uniqCats.join('·')} ${cats.length}개 구인 · 각 3점 = ${maxS}점`;
   return `<div class="page-head"><div><h1>채점 · 루브릭${showAI?' + AI':''}</h1><div class="sub">말하기·쓰기 인간 채점 (공식 채점 구인, 3점 척도)${showAI?' · AI 가채점 비교':''}</div></div></div>
   <div class="tabs"><button class="${isSpeak?'on':''}" onclick="setGradeTab('speaking')">🎙 말하기</button><button class="${!isSpeak?'on':''}" onclick="setGradeTab('writing')">✍ 쓰기</button></div>
   <div class="grade-grid">
@@ -998,9 +1010,10 @@ function sbGrade(isAdmin){
     <div><div class="card">
       <div class="row-between"><b>${stu.name} · ${AREA_KO[tab]} 응답</b><span><span class="pill system no">출제수준: ${stu.level||'—'}</span></span></div>
       <div class="mt">${respBlock}</div>
-      <div class="perm-note" style="margin:12px 0 6px">🧩 <b>${AREA_KO[tab]}는 3문항</b> · 3문항 채점을 합산해 <b>등급 변환표</b>로 등급을 산정합니다. (아래는 대표 1문항 루브릭)</div>
+      <div class="perm-note" style="margin:12px 0 6px">🧩 <b>${AREA_KO[tab]}</b>는 출제 수준에 따라 <b>3~4문항</b> 응답 · 문항별 채점을 합산해 <b>등급 변환표</b>로 등급을 산정합니다. (아래는 대표 1문항 루브릭 · 문항당 만점 <b>${maxS}점</b>)</div>
       <p class="small muted" style="font-weight:700;margin:6px 0">루브릭 (${rubricTitle})</p>
-      ${cats.map((c,idx)=>`<div class="rubric-item"><div class="ri-h"><span>${c.k} <span class="muted small" style="font-weight:400">· ${c.d}</span></span>${showAI?`<span class="ai-score">AI ${ai[idx]} / 3</span>`:''}</div>
+      ${cats.map((c,idx)=>`${(idx===0||cats[idx-1].cat!==c.cat)?`<div style="font-weight:800;color:var(--admin);margin:12px 0 2px;font-size:13px;border-left:3px solid var(--admin);padding-left:8px">${c.cat}</div>`:''}
+        <div class="rubric-item"><div class="ri-h"><span>${c.cat} · <b>${c.k}</b></span>${showAI?`<span class="ai-score">AI ${ai[idx]} / 3</span>`:''}</div>
         <details class="ai-reason" style="cursor:pointer"><summary style="font-weight:700;color:var(--admin)">세부 채점 지침 더보기</summary><div class="mt" style="line-height:1.7">· <b>상 (3)</b> ${c.g[0]}<br>· <b>중 (2)</b> ${c.g[1]}<br>· <b>하 (1)</b> ${c.g[2]}<br>· <b>0</b> ${c.g[3]}</div></details>
         <div class="score-input"><span class="small muted">강사 점수</span><input class="input" type="number" min="0" max="3" id="rub_${idx}" value="${cur[idx]}"><span class="muted">/ 3</span></div></div>`).join('')}
     </div></div>
